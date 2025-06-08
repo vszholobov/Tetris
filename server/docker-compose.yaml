@@ -1,0 +1,33 @@
+version: '3.7'
+services:
+  tetrisServer:
+    container_name: tetrisServer
+    image: cr.yandex/crptmbblvvfsq0d57d9q/tetris:f99584c38eb0ff706bb24da91f964b65cbaf3007
+    ports:
+      - "8080:8080"
+    restart: always
+    volumes:
+      - ./tetris-logs:/tetris-logs
+  fluentbit:
+    container_name: fluentbit
+    image: cr.yandex/yc/fluent-bit-plugin-yandex:v1.0.3-fluent-bit-1.8.6
+    ports:
+      - "24224:24224"
+      - "24224:24224/udp"
+    restart: always
+    volumes:
+      - ./fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf
+      - ./fluent-bit-parsers.conf:/fluent-bit/etc/parsers.conf
+      - ./tetris-logs:/tetris-logs
+  unifiedAgent:
+    container_name: unifiedAgent
+    image: cr.yandex/yc/unified-agent
+    ports:
+      - "16241:16241"
+    restart: always
+    volumes:
+      - /proc:/ua_proc
+      - ./agent-config.yml:/etc/yandex/unified_agent/conf.d/config.yml
+    environment:
+      PROC_DIRECTORY: /ua_proc
+      FOLDER_ID: b1g61t77frnu6ee4rq52

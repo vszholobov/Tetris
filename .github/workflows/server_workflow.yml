@@ -1,0 +1,33 @@
+name: Build Server Image
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - 'server/**'
+  pull_request:
+    branches: [ "main" ]
+    paths:
+      - 'server/**'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Login to Yandex Cloud Container Registry
+      id: login-cr
+      uses: yc-actions/yc-cr-login@v2
+      with:
+        yc-sa-json-credentials: ${{ secrets.YC_DOCKER_REGISTRY_KEY }}
+
+    - name: Build, tag, and push image to Yandex Cloud Container Registry
+      env:
+        CR_REGISTRY: crpkjhn2peli140q483c
+        CR_REPOSITORY: tetris
+        IMAGE_TAG: ${{ github.sha }}
+      run: |
+        docker build -t cr.yandex/$CR_REGISTRY/$CR_REPOSITORY:$IMAGE_TAG ./server
+        docker push cr.yandex/$CR_REGISTRY/$CR_REPOSITORY:$IMAGE_TAG
