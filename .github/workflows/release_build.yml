@@ -1,58 +1,36 @@
 #https://github.com/marketplace/actions/go-release-binaries
+name: Release Client
+
 on:
   release:
     types: [created]
 
 permissions:
-    contents: write
-    packages: write
+  contents: write
+  packages: write
 
 jobs:
-  release-darwin-amd64:
-    name: release darwin/amd64
+  release:
+    name: Release ${{ matrix.goos }}/${{ matrix.goarch }}
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - goos: darwin
+            goarch: amd64
+          - goos: darwin
+            goarch: arm64
+          - goos: windows
+            goarch: amd64
+          - goos: linux
+            goarch: amd64
     steps:
       - uses: actions/checkout@v3
       - uses: wangyoucao577/go-release-action@v1
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          goos: darwin
-          goarch: amd64
+          goos: ${{ matrix.goos }}
+          goarch: ${{ matrix.goarch }}
           compress_assets: "zip"
           md5sum: FALSE
-  release-darwin-arm64:
-    name: release darwin/arm64
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v3
-    - uses: wangyoucao577/go-release-action@v1
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        goos: darwin
-        goarch: arm64
-        compress_assets: "zip"
-        md5sum: FALSE
-  release-windows-amd64:
-    name: release windows/amd64
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v3
-    - uses: wangyoucao577/go-release-action@v1
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        goos: windows
-        goarch: amd64
-        compress_assets: "zip"
-        md5sum: FALSE
-  release-linux-amd64:
-    name: release linux/amd64
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v3
-    - uses: wangyoucao577/go-release-action@v1
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        goos: linux
-        goarch: amd64
-        compress_assets: "zip"
-        md5sum: FALSE
+          project_path: ./client
