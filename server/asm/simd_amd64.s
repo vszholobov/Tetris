@@ -12,23 +12,22 @@ TEXT ·IntersectsAVX(SB), NOSPLIT, $0-32
     VMOVDQU (SI), Y1
     VPAND   Y1, Y0, Y0
 
-    // Сохраним результат AND в 256-битный буфер на стеке
+    // Сохраним результат AND в 256‑битный буфер
     SUBQ    $32, SP
     VMOVDQU Y0, (SP)
 
-    // Проверим все 32 байта на ноль через XOR и TEST
-    MOVQ    (SP), AX
-    XORQ    AX, AX
-    MOVQ    8(SP), CX
+    // Загрузим и объединим 4×64‑бита без обнуления
+    MOVQ    (SP), AX       // AX = первыe 8 байт
+    MOVQ    8(SP), CX      // CX = следующие 8 байт
+    ORQ     CX, AX         // AX |= CX
+    MOVQ    16(SP), CX     // ...
     ORQ     CX, AX
-    MOVQ    16(SP), DX
-    ORQ     DX, AX
-    MOVQ    24(SP), BX
-    ORQ     BX, AX
+    MOVQ    24(SP), CX
+    ORQ     CX, AX
 
-    ADDQ    $32, SP
+    ADDQ    $32, SP        // восстановим стек
 
-    TESTQ   AX, AX
+    TESTQ   AX, AX         // проверяем, стала ли ненулевой
     JNZ     nonzero
 
 zero:
