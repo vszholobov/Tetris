@@ -160,6 +160,17 @@ func BenchmarkIntersectsUint16(b *testing.B) {
 	}
 }
 
+func BenchmarkIntersectsUint32(b *testing.B) {
+	data := generateData32(1_000_000)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		sum := processUint32(data)
+		if sum == 0 {
+			b.Fatalf("impossible")
+		}
+	}
+}
+
 func BenchmarkIntersectsUint64(b *testing.B) {
 	data := generateData64(1_000_000)
 	b.ResetTimer()
