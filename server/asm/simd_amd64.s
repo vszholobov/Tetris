@@ -2,7 +2,7 @@
 // +build amd64
 
 #include "textflag.h"
-#include "textflag.h"
+
 // func IntersectsAVX(a, b *[16]uint16) bool
 TEXT ·IntersectsAVX(SB), NOSPLIT, $0-24
     VMOVDQU (DI), Y0
