@@ -3,20 +3,21 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/sirupsen/logrus"
-	log "github.com/sirupsen/logrus"
 	"net/http"
 	"os"
 	"tetrisServer/server"
+
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/gorilla/mux"
 )
 
 func main() {
-	f := openLogFile()
-	defer f.Close()
-	log.SetOutput(f)
+	logFile := openLogFile()
+	defer logFile.Close()
+	log.SetOutput(logFile)
 	customFormatter := new(logrus.TextFormatter)
 	customFormatter.TimestampFormat = "2006-01-02 15:04:05"
 	customFormatter.FullTimestamp = true

@@ -5,6 +5,8 @@
 
 !server/
 !server/**
+!server/avx/simde
+!server/avx/simde/**
 
 !client/
 !client/**

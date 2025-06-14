@@ -1,0 +1,3 @@
+[submodule "server/avx/simde"]
+	path = server/avx/simde
+	url = https://github.com/simd-everywhere/simde
