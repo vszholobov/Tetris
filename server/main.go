@@ -3,17 +3,29 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/sirupsen/logrus"
-	log "github.com/sirupsen/logrus"
 	"net/http"
 	"os"
 	"tetrisServer/server"
+
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/gorilla/mux"
 )
 
 func main() {
+	a := make([]uint16, 16)
+	b := make([]uint16, 16)
+	a[5] = 0x0004
+	b[5] = 0x0004
+
+	if intersectsSimde(a, b) {
+		fmt.Println("Пересечение есть")
+	} else {
+		fmt.Println("Пересечения нет")
+	}
+
 	f := openLogFile()
 	defer f.Close()
 	log.SetOutput(f)

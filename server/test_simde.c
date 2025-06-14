@@ -10,15 +10,15 @@ bool intersects_simde(const uint16_t* a, const uint16_t* b) {
     return simde_mm256_testz_si256(vand, vand) == 0;
 }
 
-int main() {
-    uint16_t a[16] = {0};
-    uint16_t b[16] = {0};
-    a[5] = 0x0004;
-    b[5] = 0x0004;
-    if (intersects_simde(a, b)) {
-        printf("Пересечение есть\n");
-    } else {
-        printf("Пересечения нет\n");
-    }
-    return 0;
-}
+// int main() {
+//     uint16_t a[16] = {0};
+//     uint16_t b[16] = {0};
+//     a[5] = 0x0004;
+//     b[5] = 0x0004;
+//     if (intersects_simde(a, b)) {
+//         printf("Пересечение есть\n");
+//     } else {
+//         printf("Пересечения нет\n");
+//     }
+//     return 0;
+// }
