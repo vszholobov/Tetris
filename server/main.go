@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"tetrisServer/asm"
 	"tetrisServer/server"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -21,11 +22,11 @@ func main() {
 	c[3] = 0x10
 	d[3] = 0x10
 
-	fmt.Println(IntersectsAVX(&c, &d)) // true
+	fmt.Println(asm.IntersectsAVX(&c, &d)) // true
 
 	d[3] = 0x00
 
-	fmt.Println(IntersectsAVX(&c, &d)) // false
+	fmt.Println(asm.IntersectsAVX(&c, &d)) // false
 
 	a := make([]uint16, 16)
 	b := make([]uint16, 16)
