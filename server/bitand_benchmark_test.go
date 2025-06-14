@@ -1,8 +1,10 @@
 package main
 
 import (
+	"flag"
 	"math/big"
 	"math/rand"
+	"os"
 	"testing"
 	"time"
 	"unsafe"
@@ -134,7 +136,16 @@ func generateData32(n int) [][]uint32 {
 	return data
 }
 
-var dataSize int = 1_000
+var dataSize int
+
+func init() {
+	flag.IntVar(&dataSize, "dataSize", 1000, "size of test data")
+}
+
+func TestMain(m *testing.M) {
+	flag.Parse() // нужно, чтобы dataSize считался из os.Args
+	os.Exit(m.Run())
+}
 
 func BenchmarkIntersectsBigInt(b *testing.B) {
 	data := generateData(dataSize)
