@@ -24,7 +24,7 @@ func processBigInt(data []*big.Int) int {
 }
 
 //go:noinline
-func processGo(data [][]uint16) int {
+func processUint16(data [][]uint16) int {
 	sum := 0
 	for j := 0; j < len(data)-1; j++ {
 		a, b := data[j], data[j+1]
@@ -66,7 +66,7 @@ func prepareBigIntFromSlice(data []uint16) *big.Int {
 	return b
 }
 
-func BenchmarkIntersectsBigIntLarge(b *testing.B) {
+func BenchmarkIntersectsBigInt(b *testing.B) {
 	data := generateData(1_000_000)
 	bigData := make([]*big.Int, len(data))
 	for i, arr := range data {
@@ -81,54 +81,18 @@ func BenchmarkIntersectsBigIntLarge(b *testing.B) {
 	}
 }
 
-func BenchmarkIntersectsGoLarge(b *testing.B) {
+func BenchmarkIntersectsUint16(b *testing.B) {
 	data := generateData(1_000_000)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		sum := processGo(data)
+		sum := processUint16(data)
 		if sum == 0 {
 			b.Fatalf("impossible")
 		}
 	}
 }
 
-func BenchmarkIntersectsSimdeLarge(b *testing.B) {
-	data := generateData(1_000_000)
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		sum := 0
-		for j := 0; j < len(data)-1; j++ {
-			if intersectsSimdeSingle(data[j], data[j+1]) {
-				sum++
-			}
-		}
-		if sum == 0 {
-			b.Fatalf("impossible")
-		}
-	}
-}
-
-func BenchmarkIntersectsAsmManyLarge(b *testing.B) {
-	data := generateData(1_000_000)
-
-	aPtrs := make([]*[16]uint16, len(data)-1)
-	bPtrs := make([]*[16]uint16, len(data)-1)
-
-	for i := 0; i < len(data)-1; i++ {
-		aPtrs[i] = (*[16]uint16)(unsafe.Pointer(&data[i][0]))
-		bPtrs[i] = (*[16]uint16)(unsafe.Pointer(&data[i+1][0]))
-	}
-
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		sum := asm.IntersectsAVXMultiple(&aPtrs[0], &bPtrs[0], len(aPtrs))
-		if sum == 0 {
-			b.Fatalf("impossible")
-		}
-	}
-}
-
-func BenchmarkIntersectsAVXSingleLarge(b *testing.B) {
+func BenchmarkIntersectsAsmAvxSingle(b *testing.B) {
 	data := generateData(1_000_000)
 
 	// Преобразуем в указатели *[16]uint16
@@ -151,7 +115,43 @@ func BenchmarkIntersectsAVXSingleLarge(b *testing.B) {
 	}
 }
 
-func BenchmarkIntersectsSimdeManyLarge(b *testing.B) {
+func BenchmarkIntersectsAsmAvxMany(b *testing.B) {
+	data := generateData(1_000_000)
+
+	aPtrs := make([]*[16]uint16, len(data)-1)
+	bPtrs := make([]*[16]uint16, len(data)-1)
+
+	for i := 0; i < len(data)-1; i++ {
+		aPtrs[i] = (*[16]uint16)(unsafe.Pointer(&data[i][0]))
+		bPtrs[i] = (*[16]uint16)(unsafe.Pointer(&data[i+1][0]))
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		sum := asm.IntersectsAVXMultiple(&aPtrs[0], &bPtrs[0], len(aPtrs))
+		if sum == 0 {
+			b.Fatalf("impossible")
+		}
+	}
+}
+
+func BenchmarkCSimdeSingle(b *testing.B) {
+	data := generateData(1_000_000)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		sum := 0
+		for j := 0; j < len(data)-1; j++ {
+			if intersectsSimdeSingle(data[j], data[j+1]) {
+				sum++
+			}
+		}
+		if sum == 0 {
+			b.Fatalf("impossible")
+		}
+	}
+}
+
+func BenchmarkCSimdeMany(b *testing.B) {
 	data := generateData(1_000_000)
 
 	// Формируем два больших слайса uint16 для передачи в C,
