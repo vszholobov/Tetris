@@ -134,7 +134,7 @@ func generateData32(n int) [][]uint32 {
 	return data
 }
 
-var dataSize int = 1_000_000
+var dataSize int = 1_000
 
 func BenchmarkIntersectsBigInt(b *testing.B) {
 	data := generateData(dataSize)
