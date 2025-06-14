@@ -5,35 +5,24 @@
 
 // func IntersectsAVX(a, b *[16]uint16) bool
 TEXT ·IntersectsAVX(SB), NOSPLIT, $0-32
+    // Загрузим указатели
     MOVQ    a+0(FP), DI
     MOVQ    b+8(FP), SI
 
+    // Загрузим 256 бит
     VMOVDQU (DI), Y0
     VMOVDQU (SI), Y1
+
+    // Побитовое AND
     VPAND   Y1, Y0, Y0
 
-    // Сохраним результат AND в 256‑битный буфер
-    SUBQ    $32, SP
-    VMOVDQU Y0, (SP)
+    // Тест на ноль (ZF=1 если всё нули)
+    VPTEST  Y0, Y0
 
-    // Загрузим и объединим 4×64‑бита без обнуления
-    MOVQ    (SP), AX       // AX = первыe 8 байт
-    MOVQ    8(SP), CX      // CX = следующие 8 байт
-    ORQ     CX, AX         // AX |= CX
-    MOVQ    16(SP), CX     // ...
-    ORQ     CX, AX
-    MOVQ    24(SP), CX
-    ORQ     CX, AX
+    // Установим AL=1, если ZF=0 (т.е. есть ненулевой бит)
+    SETNE   AL
 
-    ADDQ    $32, SP        // восстановим стек
+    // Очистим верхние полубайты для безопасности
+    VZEROUPPER
 
-    TESTQ   AX, AX         // проверяем, стала ли ненулевой
-    JNZ     nonzero
-
-zero:
-    MOVB    $0, AL
-    RET
-
-nonzero:
-    MOVB    $1, AL
     RET
