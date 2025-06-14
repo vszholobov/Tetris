@@ -38,6 +38,7 @@ func processUint16(data [][]uint16) int {
 	return sum
 }
 
+//go:noinline
 func generateData(n int) [][]uint16 {
 	rand.Seed(time.Now().UnixNano())
 	data := make([][]uint16, n)
@@ -56,6 +57,7 @@ func generateData(n int) [][]uint16 {
 	return data
 }
 
+//go:noinline
 func prepareBigIntFromSlice(data []uint16) *big.Int {
 	bytes := make([]byte, 0, 32)
 	for i := len(data) - 1; i >= 0; i-- {
@@ -66,6 +68,7 @@ func prepareBigIntFromSlice(data []uint16) *big.Int {
 	return b
 }
 
+//go:noinline
 func processGo64(data [][]uint64) int {
 	sum := 0
 	for j := 0; j < len(data)-1; j++ {
@@ -80,7 +83,7 @@ func processGo64(data [][]uint64) int {
 	return sum
 }
 
-// generateData64 генерирует срез []uint64 с длиной 4
+//go:noinline
 func generateData64(n int) [][]uint64 {
 	rand.Seed(time.Now().UnixNano())
 	data := make([][]uint64, n)
@@ -91,6 +94,39 @@ func generateData64(n int) [][]uint64 {
 		} else {
 			for j := 0; j < 4; j++ {
 				arr[j] = rand.Uint64()
+			}
+		}
+		data[i] = arr
+	}
+	return data
+}
+
+//go:noinline
+func processUint32(data [][]uint32) int {
+	sum := 0
+	for j := 0; j < len(data)-1; j++ {
+		a, b := data[j], data[j+1]
+		for i := 0; i < 8; i++ {
+			if a[i]&b[i] != 0 {
+				sum++
+				break
+			}
+		}
+	}
+	return sum
+}
+
+//go:noinline
+func generateData32(n int) [][]uint32 {
+	rand.Seed(time.Now().UnixNano())
+	data := make([][]uint32, n)
+	for i := 0; i < n; i++ {
+		arr := make([]uint32, 8)
+		if i%2 == 1 {
+			copy(arr, data[i-1]) // пересечение
+		} else {
+			for j := 0; j < 8; j++ {
+				arr[j] = rand.Uint32()
 			}
 		}
 		data[i] = arr
@@ -124,7 +160,7 @@ func BenchmarkIntersectsUint16(b *testing.B) {
 	}
 }
 
-func BenchmarkIntersectsUint64Large(b *testing.B) {
+func BenchmarkIntersectsUint64(b *testing.B) {
 	data := generateData64(1_000_000)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
