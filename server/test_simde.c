@@ -28,16 +28,3 @@ int intersects_simde_many(const uint16_t* a, const uint16_t* b, size_t n) {
     }
     return count;
 }
-
-// int main() {
-//     uint16_t a[16] = {0};
-//     uint16_t b[16] = {0};
-//     a[5] = 0x0004;
-//     b[5] = 0x0004;
-//     if (intersects_simde(a, b)) {
-//         printf("Пересечение есть\n");
-//     } else {
-//         printf("Пересечения нет\n");
-//     }
-//     return 0;
-// }
