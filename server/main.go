@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"tetrisServer/asm"
+	"tetrisServer/avx/asm"
 	"tetrisServer/server"
 	"unsafe"
 
