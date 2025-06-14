@@ -7,7 +7,7 @@ bool intersects_simde_single(const uint16_t* a, const uint16_t* b) {
     simde__m256i va = simde_mm256_loadu_si256((const simde__m256i*)a);
     simde__m256i vb = simde_mm256_loadu_si256((const simde__m256i*)b);
     simde__m256i vand = simde_mm256_and_si256(va, vb);
-    return simde_mm256_testz_si256(vand, vand) == 0;
+    return simde_mm256_testz_si256(va, vb) == 0;
 }
 
 int intersects_simde_many(const uint16_t* a, const uint16_t* b, size_t n) {
@@ -18,11 +18,10 @@ int intersects_simde_many(const uint16_t* a, const uint16_t* b, size_t n) {
 
         simde__m256i va = simde_mm256_loadu_si256((const simde__m256i*)pa);
         simde__m256i vb = simde_mm256_loadu_si256((const simde__m256i*)pb);
-        simde__m256i vand = simde_mm256_and_si256(va, vb);
 
         // simde_mm256_testz_si256 возвращает 1 если и-или 0 (== пусто),
         // нам нужно противоположное — непустое пересечение
-        if (simde_mm256_testz_si256(vand, vand) == 0) {
+        if (simde_mm256_testz_si256(va, vb) == 0) {
             count++;
         }
     }
