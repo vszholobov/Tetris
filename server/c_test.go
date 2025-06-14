@@ -38,31 +38,6 @@ func processGo(data [][]uint16) int {
 	return sum
 }
 
-//go:noinline
-func processSimde(data [][]uint16) int {
-	sum := 0
-	for j := 0; j < len(data)-1; j++ {
-		if intersectsSimde(data[j], data[j+1]) {
-			sum++
-		}
-	}
-	return sum
-}
-
-//go:noinline
-func processAsm(data [][]uint16) int {
-	sum := 0
-	for j := 0; j < len(data)-1; j++ {
-		// приводим к *[16]uint16
-		a := (*[16]uint16)(unsafe.Pointer(&data[j][0]))
-		b := (*[16]uint16)(unsafe.Pointer(&data[j+1][0]))
-		if asm.IntersectsAVX(a, b) {
-			sum++
-		}
-	}
-	return sum
-}
-
 func generateData(n int) [][]uint16 {
 	rand.Seed(time.Now().UnixNano())
 	data := make([][]uint16, n)
@@ -116,7 +91,12 @@ func BenchmarkIntersectsSimdeLarge(b *testing.B) {
 	data := generateData(1_000_000)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		sum := processSimde(data)
+		sum := 0
+		for j := 0; j < len(data)-1; j++ {
+			if intersectsSimde(data[j], data[j+1]) {
+				sum++
+			}
+		}
 		if sum == 0 {
 			b.Fatalf("impossible")
 		}
@@ -127,7 +107,14 @@ func BenchmarkIntersectsAsmLarge(b *testing.B) {
 	data := generateData(1_000_000)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		sum := processAsm(data)
+		sum := 0
+		for j := 0; j < len(data)-1; j++ {
+			a := (*[16]uint16)(unsafe.Pointer(&data[j][0]))
+			c := (*[16]uint16)(unsafe.Pointer(&data[j+1][0]))
+			if asm.IntersectsAVX(a, c) {
+				sum++
+			}
+		}
 		if sum == 0 {
 			b.Fatalf("impossible")
 		}
