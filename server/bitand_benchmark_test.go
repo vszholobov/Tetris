@@ -66,6 +66,38 @@ func prepareBigIntFromSlice(data []uint16) *big.Int {
 	return b
 }
 
+func processGo64(data [][]uint64) int {
+	sum := 0
+	for j := 0; j < len(data)-1; j++ {
+		a, b := data[j], data[j+1]
+		for i := 0; i < 4; i++ {
+			if a[i]&b[i] != 0 {
+				sum++
+				break
+			}
+		}
+	}
+	return sum
+}
+
+// generateData64 генерирует срез []uint64 с длиной 4
+func generateData64(n int) [][]uint64 {
+	rand.Seed(time.Now().UnixNano())
+	data := make([][]uint64, n)
+	for i := 0; i < n; i++ {
+		arr := make([]uint64, 4)
+		if i%2 == 1 {
+			copy(arr, data[i-1])
+		} else {
+			for j := 0; j < 4; j++ {
+				arr[j] = rand.Uint64()
+			}
+		}
+		data[i] = arr
+	}
+	return data
+}
+
 func BenchmarkIntersectsBigInt(b *testing.B) {
 	data := generateData(1_000_000)
 	bigData := make([]*big.Int, len(data))
@@ -86,6 +118,17 @@ func BenchmarkIntersectsUint16(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		sum := processUint16(data)
+		if sum == 0 {
+			b.Fatalf("impossible")
+		}
+	}
+}
+
+func BenchmarkIntersectsUint64Large(b *testing.B) {
+	data := generateData64(1_000_000)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		sum := processGo64(data)
 		if sum == 0 {
 			b.Fatalf("impossible")
 		}
