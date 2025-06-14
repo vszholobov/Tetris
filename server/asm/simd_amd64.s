@@ -9,24 +9,22 @@ TEXT ·IntersectsAVX(SB), NOSPLIT, $0-32
     MOVQ    a+0(FP), DI
     MOVQ    b+8(FP), SI
 
-    // ОБНУЛЯЕМ целиком Y0 и Y1
-    VPXOR   Y0, Y0, Y0
-    VPXOR   Y1, Y1, Y1
-
-    // Загружаем 256 бит из [a] → Y0, из [b] → Y1
+    // Загрузим 256 бит из [a] → Y0, из [b] → Y1
     VMOVDQU (DI), Y0
     VMOVDQU (SI), Y1
 
     // Побитовое AND: Y0 = Y0 & Y1
     VPAND   Y1, Y0, Y0
 
-    // VPTEST выставляет ZF=1, если Y0==0
+    // Тест всех битов: ZF=1 если Y0==0
     VPTEST  Y0, Y0
 
-    // AL = (ZF == 0) → 1, если есть хотя бы один бит
+    // Обнуляем весь регистр-результат
+    XORL    EAX, EAX
+    // Если ZF==0 (т.е. какое‑то пересечение), ставим AL=1
     SETNE   AL
 
-    // Сбрасываем AVX‑состояние для возвращения в SSE‑режим
+    // Сбрасываем AVX‑состояние
     VZEROUPPER
 
     RET
