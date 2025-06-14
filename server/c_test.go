@@ -121,7 +121,30 @@ func BenchmarkIntersectsAsmManyLarge(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		sum := asm.IntersectsAVXMany(&aPtrs[0], &bPtrs[0], len(aPtrs))
+		sum := asm.IntersectsAVXMultiple(&aPtrs[0], &bPtrs[0], len(aPtrs))
+		if sum == 0 {
+			b.Fatalf("impossible")
+		}
+	}
+}
+
+func BenchmarkIntersectsAVXSingleLarge(b *testing.B) {
+	data := generateData(1_000_000)
+
+	// Преобразуем в указатели *[16]uint16
+	ptrs := make([]*[16]uint16, len(data))
+	for i := range data {
+		ptrs[i] = (*[16]uint16)(unsafe.Pointer(&data[i][0]))
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		sum := 0
+		for j := 0; j < len(ptrs)-1; j++ {
+			if asm.IntersectsAVXSingle(ptrs[j], ptrs[j+1]) {
+				sum++
+			}
+		}
 		if sum == 0 {
 			b.Fatalf("impossible")
 		}

@@ -7,6 +7,7 @@ import (
 	"os"
 	"tetrisServer/asm"
 	"tetrisServer/server"
+	"unsafe"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/sirupsen/logrus"
@@ -16,6 +17,32 @@ import (
 )
 
 func main() {
+	// Пример с данными из [][]uint16
+	e := make([]uint16, 16)
+	f := make([]uint16, 16)
+	e[3] = 0xFFFF
+	f[3] = 0x0001
+
+	// Преобразуем в *[16]uint16
+	ptr1 := (*[16]uint16)(unsafe.Pointer(&e[0]))
+	ptr2 := (*[16]uint16)(unsafe.Pointer(&f[0]))
+
+	result := asm.IntersectsAVXSingle(ptr1, ptr2)
+	fmt.Println("intersects (should be true):", result)
+
+	g := [16]uint16{}
+	h := [16]uint16{}
+
+	g[5] = 0x1234
+	h[5] = 0x1234
+
+	result = asm.IntersectsAVXSingle(&g, &h)
+	fmt.Println("intersects (should be true):", result)
+
+	h[5] = 0x0
+	result = asm.IntersectsAVXSingle(&g, &h)
+	fmt.Println("intersects (should be false):", result)
+
 	N := 100
 	c := make([]*[16]uint16, N)
 	d := make([]*[16]uint16, N)
@@ -34,7 +61,7 @@ func main() {
 		d[i] = &arr2
 	}
 
-	count := asm.IntersectsAVXMany(&c[0], &d[0], N)
+	count := asm.IntersectsAVXMultiple(&c[0], &d[0], N)
 	fmt.Println("Intersections:", count)
 
 	a := make([]uint16, 16)
@@ -48,9 +75,9 @@ func main() {
 		fmt.Println("Пересечения нет")
 	}
 
-	f := openLogFile()
-	defer f.Close()
-	log.SetOutput(f)
+	logFile := openLogFile()
+	defer logFile.Close()
+	log.SetOutput(logFile)
 	customFormatter := new(logrus.TextFormatter)
 	customFormatter.TimestampFormat = "2006-01-02 15:04:05"
 	customFormatter.FullTimestamp = true
