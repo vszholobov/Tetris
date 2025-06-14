@@ -41,10 +41,15 @@ func processGo(data [][]uint16) int {
 func generateData(n int) [][]uint16 {
 	rand.Seed(time.Now().UnixNano())
 	data := make([][]uint16, n)
-	for i := range data {
+	for i := 0; i < n; i++ {
 		arr := make([]uint16, 16)
-		for j := range arr {
-			arr[j] = uint16(rand.Intn(0xFFFF))
+		if i%2 == 1 {
+			// копируем предыдущий элемент, чтобы гарантировать пересечение
+			copy(arr, data[i-1])
+		} else {
+			for j := 0; j < 16; j++ {
+				arr[j] = uint16(rand.Intn(0xFFFF))
+			}
 		}
 		data[i] = arr
 	}
