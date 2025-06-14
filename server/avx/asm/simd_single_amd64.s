@@ -15,9 +15,5 @@ TEXT ·IntersectsAVXSingle(SB), NOSPLIT, $0-32
     SETNE   AL
     MOVB    AL, ret+16(FP)
 
-//    SETNE   R8B
-//    MOVB    R8B, ret+16(FP)
-
-    // Очистка AVX
     VZEROUPPER
     RET

@@ -47,7 +47,6 @@ func generateData(n int) [][]uint16 {
 	for i := 0; i < n; i++ {
 		arr := make([]uint16, 16)
 		if i%2 == 1 {
-			// копируем предыдущий элемент, чтобы гарантировать пересечение
 			copy(arr, data[i-1])
 		} else {
 			for j := 0; j < 16; j++ {
@@ -125,7 +124,7 @@ func generateData32(n int) [][]uint32 {
 	for i := 0; i < n; i++ {
 		arr := make([]uint32, 8)
 		if i%2 == 1 {
-			copy(arr, data[i-1]) // пересечение
+			copy(arr, data[i-1])
 		} else {
 			for j := 0; j < 8; j++ {
 				arr[j] = rand.Uint32()
@@ -143,7 +142,7 @@ func init() {
 }
 
 func TestMain(m *testing.M) {
-	flag.Parse() // нужно, чтобы dataSize считался из os.Args
+	flag.Parse()
 	os.Exit(m.Run())
 }
 
@@ -198,7 +197,6 @@ func BenchmarkIntersectsUint64(b *testing.B) {
 func BenchmarkIntersectsAsmAvxSingle(b *testing.B) {
 	data := generateData(dataSize)
 
-	// Преобразуем в указатели *[16]uint16
 	ptrs := make([]*[16]uint16, len(data))
 	for i := range data {
 		ptrs[i] = (*[16]uint16)(unsafe.Pointer(&data[i][0]))
@@ -257,8 +255,6 @@ func BenchmarkCSimdeSingle(b *testing.B) {
 func BenchmarkCSimdeMany(b *testing.B) {
 	data := generateData(dataSize)
 
-	// Формируем два больших слайса uint16 для передачи в C,
-	// размер: 16 * (len(data) - 1) — чтобы сравнивать пары
 	aFlat := make([]uint16, 16*(len(data)-1))
 	bFlat := make([]uint16, 16*(len(data)-1))
 

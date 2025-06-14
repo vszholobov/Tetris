@@ -24,20 +24,18 @@ func TestIntersectsAVXFunctions(t *testing.T) {
 		t.Fatal("Test data length mismatch")
 	}
 
-	// Проверяем IntersectsAVXSingle и intersectsSimdeSingle поэлементно
 	for i := 0; i < n; i++ {
 		a := &testDataA[i]
 		b := &testDataB[i]
 
 		gotAsm := asm.IntersectsAVXSingle(a, b)
-		gotSimde := intersectsSimdeSingle(a[:], b[:]) // <-- здесь
+		gotSimde := intersectsSimdeSingle(a[:], b[:])
 
 		if gotAsm != gotSimde {
 			t.Errorf("IntersectsAVXSingle mismatch at index %d: asm=%v simde=%v", i, gotAsm, gotSimde)
 		}
 	}
 
-	// Подготавливаем массивы указателей для IntersectsAVXMultiple
 	ptrA := make([]*[16]uint16, n)
 	ptrB := make([]*[16]uint16, n)
 	for i := 0; i < n; i++ {
@@ -67,7 +65,6 @@ func TestIntersectsAVXFunctions(t *testing.T) {
 	}
 }
 
-// flatten превращает слайс [][16]uint16 в []uint16 (конкатенация)
 func flatten(slices [][16]uint16) []uint16 {
 	out := make([]uint16, 0, len(slices)*16)
 	for _, arr := range slices {

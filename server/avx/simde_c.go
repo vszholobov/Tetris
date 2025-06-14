@@ -15,7 +15,6 @@ import (
 )
 
 func intersectsSimdeSingle(a, b []uint16) bool {
-	// Передаем указатели на элементы
 	ret := C.intersects_simde_single(
 		(*C.uint16_t)(unsafe.Pointer(&a[0])),
 		(*C.uint16_t)(unsafe.Pointer(&b[0])),
