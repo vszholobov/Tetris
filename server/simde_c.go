@@ -15,9 +15,6 @@ import (
 )
 
 func intersectsSimdeSingle(a, b []uint16) bool {
-	if len(a) < 16 || len(b) < 16 {
-		panic("Arrays must be at least 16 elements")
-	}
 	// Передаем указатели на элементы
 	ret := C.intersects_simde_single(
 		(*C.uint16_t)(unsafe.Pointer(&a[0])),
@@ -27,9 +24,6 @@ func intersectsSimdeSingle(a, b []uint16) bool {
 }
 
 func intersectsSimdeMany(a, b []uint16) int {
-	if len(a) < 16 || len(b) < 16 || len(a) != len(b) {
-		panic("Arrays must be of equal length and at least 16 elements")
-	}
 	n := len(a) / 16
 	return int(C.intersects_simde_many(
 		(*C.uint16_t)(unsafe.Pointer(&a[0])),
