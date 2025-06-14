@@ -4,7 +4,7 @@
 #include "textflag.h"
 
 // func IntersectsAVX(a, b *[16]uint16) bool
-TEXT ·IntersectsAVX(SB), NOSPLIT, $0-32
+TEXT IntersectsAVXSingle(SB), NOSPLIT, $0-32
     // Считаем a → DI, b → SI
     MOVQ    a+0(FP), DI
     MOVQ    b+8(FP), SI

@@ -4,7 +4,7 @@
 #include "textflag.h"
 
 // func IntersectsAVXMany(a, b **[16]uint16, n int) int
-TEXT ·IntersectsAVXMany(SB), NOSPLIT, $0-32
+TEXT IntersectsAVXMultiple(SB), NOSPLIT, $0-32
     MOVQ a+0(FP), R8       // R8 = a
     MOVQ b+8(FP), R9       // R9 = b
     MOVQ n+16(FP), CX      // CX = n
