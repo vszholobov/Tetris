@@ -51,6 +51,20 @@ func TestIntersectsAVXFunctions(t *testing.T) {
 	if gotMultipleAsm != gotMultipleSimde {
 		t.Errorf("IntersectsAVXMultiple mismatch: asm=%d simde=%d", gotMultipleAsm, gotMultipleSimde)
 	}
+
+	var sumSingles int
+	for i := 0; i < n; i++ {
+		a := &testDataA[i]
+		b := &testDataB[i]
+
+		gotAsm := asm.IntersectsAVXSingle(a, b)
+		if gotAsm {
+			sumSingles++
+		}
+	}
+	if sumSingles != gotMultipleAsm {
+		t.Errorf("Sum of single intersections (%d) != multiple intersections (%d)", sumSingles, gotMultipleAsm)
+	}
 }
 
 // flatten превращает слайс [][16]uint16 в []uint16 (конкатенация)
