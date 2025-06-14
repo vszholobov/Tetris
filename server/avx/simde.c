@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include "simde/simde/x86/avx2.h"
+#include "simde/x86/avx2.h"
 #include <stdint.h>
 #include <stdbool.h>
 
