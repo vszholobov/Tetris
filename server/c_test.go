@@ -98,7 +98,7 @@ func BenchmarkIntersectsSimdeLarge(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		sum := 0
 		for j := 0; j < len(data)-1; j++ {
-			if intersectsSimde(data[j], data[j+1]) {
+			if intersectsSimdeSingle(data[j], data[j+1]) {
 				sum++
 			}
 		}
@@ -145,6 +145,28 @@ func BenchmarkIntersectsAVXSingleLarge(b *testing.B) {
 				sum++
 			}
 		}
+		if sum == 0 {
+			b.Fatalf("impossible")
+		}
+	}
+}
+
+func BenchmarkIntersectsSimdeManyLarge(b *testing.B) {
+	data := generateData(1_000_000)
+
+	// Формируем два больших слайса uint16 для передачи в C,
+	// размер: 16 * (len(data) - 1) — чтобы сравнивать пары
+	aFlat := make([]uint16, 16*(len(data)-1))
+	bFlat := make([]uint16, 16*(len(data)-1))
+
+	for i := 0; i < len(data)-1; i++ {
+		copy(aFlat[i*16:(i+1)*16], data[i])
+		copy(bFlat[i*16:(i+1)*16], data[i+1])
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		sum := intersectsSimdeMany(aFlat, bFlat)
 		if sum == 0 {
 			b.Fatalf("impossible")
 		}

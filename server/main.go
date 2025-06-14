@@ -69,7 +69,7 @@ func main() {
 	a[5] = 0x0004
 	b[5] = 0x0004
 
-	if intersectsSimde(a, b) {
+	if intersectsSimdeSingle(a, b) {
 		fmt.Println("Пересечение есть")
 	} else {
 		fmt.Println("Пересечения нет")
