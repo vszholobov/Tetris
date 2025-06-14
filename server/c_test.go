@@ -108,18 +108,20 @@ func BenchmarkIntersectsSimdeLarge(b *testing.B) {
 	}
 }
 
-func BenchmarkIntersectsAsmLarge(b *testing.B) {
+func BenchmarkIntersectsAsmManyLarge(b *testing.B) {
 	data := generateData(1_000_000)
+
+	aPtrs := make([]*[16]uint16, len(data)-1)
+	bPtrs := make([]*[16]uint16, len(data)-1)
+
+	for i := 0; i < len(data)-1; i++ {
+		aPtrs[i] = (*[16]uint16)(unsafe.Pointer(&data[i][0]))
+		bPtrs[i] = (*[16]uint16)(unsafe.Pointer(&data[i+1][0]))
+	}
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		sum := 0
-		for j := 0; j < len(data)-1; j++ {
-			a := (*[16]uint16)(unsafe.Pointer(&data[j][0]))
-			c := (*[16]uint16)(unsafe.Pointer(&data[j+1][0]))
-			if asm.IntersectsAVX(a, c) {
-				sum++
-			}
-		}
+		sum := asm.IntersectsAVXMany(&aPtrs[0], &bPtrs[0], len(aPtrs))
 		if sum == 0 {
 			b.Fatalf("impossible")
 		}
