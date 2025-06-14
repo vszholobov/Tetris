@@ -134,8 +134,10 @@ func generateData32(n int) [][]uint32 {
 	return data
 }
 
+var dataSize int = 1_000_000_000
+
 func BenchmarkIntersectsBigInt(b *testing.B) {
-	data := generateData(1_000_000)
+	data := generateData(dataSize)
 	bigData := make([]*big.Int, len(data))
 	for i, arr := range data {
 		bigData[i] = prepareBigIntFromSlice(arr)
@@ -150,7 +152,7 @@ func BenchmarkIntersectsBigInt(b *testing.B) {
 }
 
 func BenchmarkIntersectsUint16(b *testing.B) {
-	data := generateData(1_000_000)
+	data := generateData(dataSize)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		sum := processUint16(data)
@@ -161,7 +163,7 @@ func BenchmarkIntersectsUint16(b *testing.B) {
 }
 
 func BenchmarkIntersectsUint32(b *testing.B) {
-	data := generateData32(1_000_000)
+	data := generateData32(dataSize)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		sum := processUint32(data)
@@ -172,7 +174,7 @@ func BenchmarkIntersectsUint32(b *testing.B) {
 }
 
 func BenchmarkIntersectsUint64(b *testing.B) {
-	data := generateData64(1_000_000)
+	data := generateData64(dataSize)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		sum := processGo64(data)
@@ -183,7 +185,7 @@ func BenchmarkIntersectsUint64(b *testing.B) {
 }
 
 func BenchmarkIntersectsAsmAvxSingle(b *testing.B) {
-	data := generateData(1_000_000)
+	data := generateData(dataSize)
 
 	// Преобразуем в указатели *[16]uint16
 	ptrs := make([]*[16]uint16, len(data))
@@ -206,7 +208,7 @@ func BenchmarkIntersectsAsmAvxSingle(b *testing.B) {
 }
 
 func BenchmarkIntersectsAsmAvxMany(b *testing.B) {
-	data := generateData(1_000_000)
+	data := generateData(dataSize)
 
 	aPtrs := make([]*[16]uint16, len(data)-1)
 	bPtrs := make([]*[16]uint16, len(data)-1)
@@ -226,7 +228,7 @@ func BenchmarkIntersectsAsmAvxMany(b *testing.B) {
 }
 
 func BenchmarkCSimdeSingle(b *testing.B) {
-	data := generateData(1_000_000)
+	data := generateData(dataSize)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		sum := 0
@@ -242,7 +244,7 @@ func BenchmarkCSimdeSingle(b *testing.B) {
 }
 
 func BenchmarkCSimdeMany(b *testing.B) {
-	data := generateData(1_000_000)
+	data := generateData(dataSize)
 
 	// Формируем два больших слайса uint16 для передачи в C,
 	// размер: 16 * (len(data) - 1) — чтобы сравнивать пары
