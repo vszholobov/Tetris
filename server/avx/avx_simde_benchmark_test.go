@@ -9,7 +9,7 @@ import (
 	"time"
 	"unsafe"
 
-	"tetrisServer/asm"
+	"tetrisServer/avx/asm"
 )
 
 //go:noinline

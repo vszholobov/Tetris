@@ -2,7 +2,7 @@ package avx
 
 import (
 	"testing"
-	"tetrisServer/asm"
+	"tetrisServer/avx/asm"
 )
 
 func TestIntersectsAVXFunctions(t *testing.T) {
