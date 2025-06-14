@@ -5,26 +5,26 @@
 
 // func IntersectsAVX(a, b *[16]uint16) bool
 TEXT ·IntersectsAVX(SB), NOSPLIT, $0-32
-    // a → DI, b → SI
+    // Считаем a → DI, b → SI
     MOVQ    a+0(FP), DI
     MOVQ    b+8(FP), SI
 
-    // Загрузим 256 бит
+    // Загружаем 256 бит
     VMOVDQU (DI), Y0
     VMOVDQU (SI), Y1
 
-    // Побитовое AND
+    // Побитовое AND: Y0 = Y0 & Y1
     VPAND   Y1, Y0, Y0
 
-    // Тест всех битов: ZF=1, если Y0==0
+    // Проверка на ноль
     VPTEST  Y0, Y0
 
-    // Обнуляем весь низ RAX (через 32‑битный XOR)
-    XORL    AX, AX
-    // Если ZF==0 (есть хотя бы один бит) → AL=1
-    SETNE   AL
+    // AL := (Y0 != 0)
+    SETNE   R8B
+    // Записываем результат в ret
+    MOVB    R8B, ret+16(FP)
 
-    // Сброс AVX-контекста
+    // Очистка AVX
     VZEROUPPER
 
     RET
