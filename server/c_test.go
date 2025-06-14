@@ -5,7 +5,23 @@ import (
 	"math/rand"
 	"testing"
 	"time"
+	"unsafe"
+
+	"tetrisServer/asm"
 )
+
+// ваша C‑SIMD-функция
+// //go:noescape
+// func intersectsSimde(a, b []uint16) bool
+
+// новая обёртка для asm
+func intersectsAsm(a, b []uint16) bool {
+	if len(a) < 16 || len(b) < 16 {
+		panic("need at least 16 elements")
+	}
+	// приводим к массивам [16]uint16
+	return asm.IntersectsAVX((*[16]uint16)(unsafe.Pointer(&a[0])), (*[16]uint16)(unsafe.Pointer(&b[0])))
+}
 
 func intersectsBigInt(a, b *big.Int) bool {
 	var tmp big.Int
@@ -47,7 +63,6 @@ func generateData(n int) [][]uint16 {
 
 func BenchmarkIntersectsBigIntLarge(b *testing.B) {
 	data := generateData(1_000_000)
-	// Подготовим big.Int слайсы
 	bigData := make([]*big.Int, len(data))
 	for i, arr := range data {
 		bigData[i] = prepareBigIntFromSlice(arr)
@@ -61,7 +76,6 @@ func BenchmarkIntersectsBigIntLarge(b *testing.B) {
 				sum++
 			}
 		}
-		// Чтобы избежать оптимизации удаления цикла
 		if sum == 0 {
 			b.Fatalf("impossible")
 		}
@@ -93,6 +107,23 @@ func BenchmarkIntersectsSimdeLarge(b *testing.B) {
 		sum := 0
 		for j := 0; j < len(data)-1; j++ {
 			if intersectsSimde(data[j], data[j+1]) {
+				sum++
+			}
+		}
+		if sum == 0 {
+			b.Fatalf("impossible")
+		}
+	}
+}
+
+func BenchmarkIntersectsAsmLarge(b *testing.B) {
+	data := generateData(1_000_000)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		sum := 0
+		for j := 0; j < len(data)-1; j++ {
+			if intersectsAsm(data[j], data[j+1]) {
 				sum++
 			}
 		}
