@@ -15,6 +15,18 @@ import (
 )
 
 func main() {
+	c := [16]uint16{}
+	d := [16]uint16{}
+
+	c[3] = 0x10
+	d[3] = 0x10
+
+	fmt.Println(IntersectsAVX(&c, &d)) // true
+
+	d[3] = 0x00
+
+	fmt.Println(IntersectsAVX(&c, &d)) // false
+
 	a := make([]uint16, 16)
 	b := make([]uint16, 16)
 	a[5] = 0x0004
