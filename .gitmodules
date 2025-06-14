@@ -1,3 +1,3 @@
-[submodule "server/simde"]
-	path = server/simde
-	url = https://github.com/simd-everywhere/simde.git
+[submodule "server/avx/simde"]
+	path = server/avx/simde
+	url = https://github.com/simd-everywhere/simde
