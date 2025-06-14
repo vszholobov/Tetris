@@ -1,12 +1,11 @@
 package main
 
 /*
-#cgo CFLAGS: -I./simde/simde
+#cgo CFLAGS: -I./simde/simde -O3 -mavx2
 #cgo LDFLAGS:
 #include <stdbool.h>
 #include <stdint.h>
 
-// Объявляем C-функцию, чтобы Go мог её вызвать
 bool intersects_simde(const uint16_t* a, const uint16_t* b);
 */
 import "C"
