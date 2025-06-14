@@ -8,7 +8,7 @@ TEXT ·IntersectsAVXMultiple(SB), NOSPLIT, $0-32
     MOVQ a+0(FP), R8       // R8 = a
     MOVQ b+8(FP), R9       // R9 = b
     MOVQ n+16(FP), CX      // CX = n
-    XORL AX, AX            // AX = result (int)
+    XORL AX, AX            // AX = result (int) (обнуляем 32-битный EAX)
 
     XORQ R10, R10          // R10 = index i = 0
 
@@ -25,8 +25,8 @@ loop:
     VPTEST Y0, Y0
     JZ skip
 
-    // increment result
-    INCQ AX
+    // increment result (32-bit)
+    INCL AX
 
 skip:
     INCQ R10
