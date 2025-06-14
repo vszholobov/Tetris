@@ -16,17 +16,26 @@ import (
 )
 
 func main() {
-	c := [16]uint16{}
-	d := [16]uint16{}
+	N := 100
+	c := make([]*[16]uint16, N)
+	d := make([]*[16]uint16, N)
 
-	c[3] = 0x10
-	d[3] = 0x10
+	for i := 0; i < N; i++ {
+		arr1 := [16]uint16{}
+		arr2 := [16]uint16{}
 
-	fmt.Println(asm.IntersectsAVX(&c, &d)) // true
+		// Пример заполнения
+		if i%2 == 0 {
+			arr1[3] = 0xFF
+			arr2[3] = 0xFF
+		}
 
-	d[3] = 0x00
+		c[i] = &arr1
+		d[i] = &arr2
+	}
 
-	fmt.Println(asm.IntersectsAVX(&c, &d)) // false
+	count := asm.IntersectsAVXMany(&c[0], &d[0], N)
+	fmt.Println("Intersections:", count)
 
 	a := make([]uint16, 16)
 	b := make([]uint16, 16)
