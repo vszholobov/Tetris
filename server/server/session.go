@@ -2,13 +2,14 @@ package server
 
 import (
 	"fmt"
-	"github.com/google/uuid"
-	log "github.com/sirupsen/logrus"
 	"math/rand"
 	"sync"
 	"tetrisServer/field"
 	"time"
 	"unicode/utf8"
+
+	"github.com/google/uuid"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/gorilla/websocket"
 )
@@ -101,14 +102,14 @@ func (playerSession *PlayerSession) processGameField() {
 	for {
 		playerSession.inputControl()
 
-		if !gameField.CurrentPiece.MoveDown() {
-			gameField.Val.Or(gameField.Val, gameField.CurrentPiece.GetVal())
+		if !gameField.CurrentPiece.Move(field.PieceMoveDown) {
+			gameField.ConcatCurrentPiece()
 			gameField.SelectNextPiece()
-			if !gameField.CurrentPiece.CanMoveDown() {
+			if !gameField.CurrentPiece.CanMove(field.PieceMoveDown) {
 				playerSession.endSession(gameField)
 				break
 			}
-			gameField.Clean()
+			gameField.CleanLines()
 		}
 	}
 }
@@ -139,7 +140,7 @@ func (playerSession *PlayerSession) endSession(gameField *field.Field) {
 		runningSessionsGauge.Dec()
 	} else {
 		// add last piece to field to not lose it
-		gameField.Val.Or(gameField.Val, gameField.CurrentPiece.GetVal())
+		gameField.ConcatCurrentPiece()
 		playerSession.SendMessage(FormatFieldMessage(0, 1, gameField))
 		playerSession.EnemySession.SendMessage(FormatFieldMessage(1, 1, gameField))
 	}
@@ -166,21 +167,16 @@ func (playerSession *PlayerSession) inputControl() {
 		select {
 		case moveType := <-playerSession.playerInputChannel:
 			switch moveType {
-			case 100:
-				// d
-				gameField.CurrentPiece.MoveLeft()
-			case 97:
-				// a
-				gameField.CurrentPiece.MoveRight()
-			case 115:
-				// s
-				gameField.CurrentPiece.MoveDown()
-			case 113:
-				// q
-				gameField.CurrentPiece.Rotate(field.Left)
-			case 101:
-				// e
-				gameField.CurrentPiece.Rotate(field.Right)
+			case 'd':
+				gameField.CurrentPiece.Move(field.PieceMoveLeft)
+			case 'a':
+				gameField.CurrentPiece.Move(field.PieceMoveRight)
+			case 's':
+				gameField.CurrentPiece.Move(field.PieceMoveDown)
+			case 'q':
+				gameField.CurrentPiece.Rotate(field.PieceRotateLeft)
+			case 'e':
+				gameField.CurrentPiece.Rotate(field.PieceRotateRight)
 			}
 		case <-timeout:
 			return

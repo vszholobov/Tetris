@@ -51,9 +51,7 @@ func MakeDefaultField(pieceGenerator *rand.Rand) Field {
 }
 
 func MakeField(fieldVal *big.Int, pieceGenerator *rand.Rand) Field {
-	score := 0
-	cleanCount := 0
-	return Field{Val: fieldVal, Score: &score, CleanCount: &cleanCount, pieceGenerator: pieceGenerator}
+	return Field{Val: fieldVal, Score: new(int), CleanCount: new(int), pieceGenerator: pieceGenerator}
 }
 
 func (gameField *Field) SelectNextPiece() {
@@ -79,12 +77,7 @@ func (gameField *Field) SelectNextPiece() {
 	gameField.NextPiece = &piece
 }
 
-func (gameField *Field) String() string {
-	newField := big.NewInt(0).Or(gameField.Val, gameField.CurrentPiece.GetVal())
-	return newField.String()
-}
-
-func (gameField *Field) Clean() {
+func (gameField *Field) CleanLines() {
 	restField := big.NewInt(0)
 	currentCleanCount := 0
 	for i := 0; i < FieldHeight-1; i++ {
@@ -138,6 +131,15 @@ func (gameField *Field) Intersects(pieceVal *big.Int) bool {
 	return newField.And(newField, newShape).Cmp(big.NewInt(0)) != 0
 }
 
+func (gameField *Field) ConcatCurrentPiece() {
+	gameField.Val.Or(gameField.Val, gameField.CurrentPiece.getVal())
+}
+
 func (gameField *Field) GetSpeed() int {
 	return *gameField.CleanCount/CleanRowsCountToIncreaseSpeed + 1
+}
+
+func (gameField *Field) String() string {
+	newField := big.NewInt(0).Or(gameField.Val, gameField.CurrentPiece.getVal())
+	return newField.String()
 }

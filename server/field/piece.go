@@ -1,7 +1,6 @@
 package field
 
 import (
-	"math"
 	"math/big"
 )
 
@@ -116,8 +115,16 @@ var rotationsByType = map[PieceType][]*big.Int{
 type RotationType int
 
 const (
-	Left  RotationType = -1
-	Right RotationType = 1
+	PieceRotateLeft  RotationType = -1
+	PieceRotateRight RotationType = 1
+)
+
+type PieceMoveDirection int
+
+const (
+	PieceMoveLeft  PieceMoveDirection = 0
+	PieceMoveRight PieceMoveDirection = 1
+	PieceMoveDown  PieceMoveDirection = 2
 )
 
 type Piece struct {
@@ -148,19 +155,14 @@ func copyRotations(rotations []*big.Int) []*big.Int {
 }
 
 func (piece *Piece) Rotate(rotationType RotationType) bool {
-	var diff int
-	if rotationType == Left {
-		diff = -1
-	} else {
-		diff = 1
-	}
-
+	diff := int(rotationType)
 	piece.changeRotationCount(diff)
-	if !piece.field.Intersects(piece.GetVal()) {
-		return true
+	if piece.field.Intersects(piece.getVal()) {
+		// cancel rotation if intersects
+		piece.changeRotationCount(-diff)
+		return false
 	}
-	piece.changeRotationCount(-diff)
-	return false
+	return true
 }
 
 func (piece *Piece) changeRotationCount(diff int) {
@@ -173,49 +175,47 @@ func (piece *Piece) changeRotationCount(diff int) {
 	}
 }
 
-func (piece *Piece) GetVal() *big.Int {
-	abs := int64(math.Abs(float64(piece.rotationCount % rotationsCntByType[piece.PieceType])))
-	return piece.rotations[abs]
-}
-
-func (piece *Piece) MoveLeft() bool {
-	newPieceVal := big.NewInt(0).Set(piece.GetVal())
-	newPieceVal.Rsh(newPieceVal, 1)
-	if piece.field.Intersects(newPieceVal) {
+func (piece *Piece) Move(direction PieceMoveDirection) bool {
+	if !piece.CanMove(direction) {
 		return false
 	}
+
 	for i := range piece.rotations {
 		newRotation := big.NewInt(0).Set(piece.rotations[i])
-		piece.rotations[i] = newRotation.Rsh(newRotation, 1)
+		switch direction {
+		case PieceMoveLeft:
+			piece.rotations[i] = newRotation.Rsh(newRotation, 1)
+		case PieceMoveRight:
+			piece.rotations[i] = newRotation.Lsh(newRotation, 1)
+		case PieceMoveDown:
+			piece.rotations[i] = newRotation.Lsh(newRotation, FieldWidth)
+		}
 	}
 	return true
 }
 
-func (piece *Piece) MoveRight() bool {
-	newPieceVal := big.NewInt(0).Set(piece.GetVal())
-	newPieceVal.Lsh(newPieceVal, 1)
-	if piece.field.Intersects(newPieceVal) {
+func (piece *Piece) CanMove(moveDirection PieceMoveDirection) bool {
+	newPieceVal := big.NewInt(0).Set(piece.getVal())
+
+	switch moveDirection {
+	case PieceMoveLeft:
+		newPieceVal.Rsh(newPieceVal, 1)
+	case PieceMoveRight:
+		newPieceVal.Lsh(newPieceVal, 1)
+	case PieceMoveDown:
+		newPieceVal.Lsh(newPieceVal, FieldWidth)
+	default:
 		return false
 	}
-	for i := range piece.rotations {
-		newRotation := big.NewInt(0).Set(piece.rotations[i])
-		piece.rotations[i] = newRotation.Lsh(newRotation, 1)
-	}
-	return true
+
+	return !piece.field.Intersects(newPieceVal)
 }
 
-func (piece *Piece) MoveDown() bool {
-	if !piece.CanMoveDown() {
-		return false
+// Get current rotated piece value
+func (piece *Piece) getVal() *big.Int {
+	idx := piece.rotationCount % rotationsCntByType[piece.PieceType]
+	if idx < 0 {
+		idx += rotationsCntByType[piece.PieceType]
 	}
-	for i := range piece.rotations {
-		newRotation := big.NewInt(0).Set(piece.rotations[i])
-		piece.rotations[i] = newRotation.Lsh(newRotation, FieldWidth)
-	}
-	return true
-}
-
-func (piece *Piece) CanMoveDown() bool {
-	movedDownPiece := big.NewInt(0).Lsh(piece.GetVal(), FieldWidth)
-	return !piece.field.Intersects(movedDownPiece)
+	return piece.rotations[idx]
 }
