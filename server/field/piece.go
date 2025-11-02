@@ -131,10 +131,10 @@ type Piece struct {
 	rotationCount int
 	PieceType     PieceType
 	rotations     []*big.Int
-	field         *Field
+	field         Field
 }
 
-func MakePiece(field *Field, pieceType PieceType) Piece {
+func MakePiece(field Field, pieceType PieceType) Piece {
 	rotations := rotationsByType[pieceType]
 	rotationsCopy := copyRotations(rotations)
 	return Piece{
@@ -157,7 +157,7 @@ func copyRotations(rotations []*big.Int) []*big.Int {
 func (piece *Piece) Rotate(rotationType RotationType) bool {
 	diff := int(rotationType)
 	piece.changeRotationCount(diff)
-	if piece.field.Intersects(piece.getVal()) {
+	if piece.field.intersects(piece.getVal()) {
 		// cancel rotation if intersects
 		piece.changeRotationCount(-diff)
 		return false
@@ -175,14 +175,14 @@ func (piece *Piece) changeRotationCount(diff int) {
 	}
 }
 
-func (piece *Piece) Move(direction PieceMoveDirection) bool {
-	if !piece.CanMove(direction) {
+func (piece *Piece) Move(moveDirection PieceMoveDirection) bool {
+	if !piece.CanMove(moveDirection) {
 		return false
 	}
 
 	for i := range piece.rotations {
 		newRotation := big.NewInt(0).Set(piece.rotations[i])
-		switch direction {
+		switch moveDirection {
 		case PieceMoveLeft:
 			piece.rotations[i] = newRotation.Rsh(newRotation, 1)
 		case PieceMoveRight:
@@ -208,7 +208,7 @@ func (piece *Piece) CanMove(moveDirection PieceMoveDirection) bool {
 		return false
 	}
 
-	return !piece.field.Intersects(newPieceVal)
+	return !piece.field.intersects(newPieceVal)
 }
 
 // Get current rotated piece value

@@ -22,7 +22,7 @@ type GameSession struct {
 }
 
 type PlayerSession struct {
-	playerField        *field.Field
+	playerField        field.Field
 	conn               *websocket.Conn
 	playerInputChannel chan rune
 	isEnded            bool
@@ -40,9 +40,9 @@ func MakeGameSession() *GameSession {
 }
 
 func MakePlayerSession(conn *websocket.Conn, pieceGenerator *rand.Rand, gameSession *GameSession) *PlayerSession {
-	field := field.MakeDefaultField(pieceGenerator)
+	field := field.MakeField(pieceGenerator)
 	session := PlayerSession{
-		playerField:        &field,
+		playerField:        field,
 		conn:               conn,
 		playerInputChannel: make(chan rune),
 		isEnded:            false,
@@ -102,10 +102,10 @@ func (playerSession *PlayerSession) processGameField() {
 	for {
 		playerSession.inputControl()
 
-		if !gameField.CurrentPiece.Move(field.PieceMoveDown) {
-			gameField.ConcatCurrentPiece()
+		if !gameField.MovePiece(field.PieceMoveDown) {
+			gameField.ConcatPiece()
 			gameField.SelectNextPiece()
-			if !gameField.CurrentPiece.CanMove(field.PieceMoveDown) {
+			if !gameField.CanMovePiece(field.PieceMoveDown) {
 				playerSession.endSession(gameField)
 				break
 			}
@@ -114,12 +114,12 @@ func (playerSession *PlayerSession) processGameField() {
 	}
 }
 
-func (playerSession *PlayerSession) endSession(gameField *field.Field) {
+func (playerSession *PlayerSession) endSession(gameField field.Field) {
 	// TODO: race
 	playerSession.isEnded = true
 	if playerSession.EnemySession.isEnded {
-		playerScore := *playerSession.playerField.Score
-		enemyScore := *playerSession.EnemySession.playerField.Score
+		playerScore := playerSession.playerField.GetScore()
+		enemyScore := playerSession.EnemySession.playerField.GetScore()
 
 		if playerScore > enemyScore {
 			playerSession.SendMessage("0 0 WIN!")
@@ -140,7 +140,7 @@ func (playerSession *PlayerSession) endSession(gameField *field.Field) {
 		runningSessionsGauge.Dec()
 	} else {
 		// add last piece to field to not lose it
-		gameField.ConcatCurrentPiece()
+		gameField.ConcatPiece()
 		playerSession.SendMessage(FormatFieldMessage(0, 1, gameField))
 		playerSession.EnemySession.SendMessage(FormatFieldMessage(1, 1, gameField))
 	}
@@ -168,15 +168,15 @@ func (playerSession *PlayerSession) inputControl() {
 		case moveType := <-playerSession.playerInputChannel:
 			switch moveType {
 			case 'd':
-				gameField.CurrentPiece.Move(field.PieceMoveLeft)
+				gameField.MovePiece(field.PieceMoveLeft)
 			case 'a':
-				gameField.CurrentPiece.Move(field.PieceMoveRight)
+				gameField.MovePiece(field.PieceMoveRight)
 			case 's':
-				gameField.CurrentPiece.Move(field.PieceMoveDown)
+				gameField.MovePiece(field.PieceMoveDown)
 			case 'q':
-				gameField.CurrentPiece.Rotate(field.PieceRotateLeft)
+				gameField.RotatePiece(field.PieceRotateLeft)
 			case 'e':
-				gameField.CurrentPiece.Rotate(field.PieceRotateRight)
+				gameField.RotatePiece(field.PieceRotateRight)
 			}
 		case <-timeout:
 			return
@@ -184,6 +184,6 @@ func (playerSession *PlayerSession) inputControl() {
 	}
 }
 
-func FormatFieldMessage(isEnemyField int, isAlive int, gameField *field.Field) string {
-	return fmt.Sprintf("%d %d %s %d %d %d %d", isEnemyField, isAlive, gameField.String(), gameField.GetSpeed(), *gameField.Score, *gameField.CleanCount, gameField.NextPiece.PieceType)
+func FormatFieldMessage(isEnemyField int, isAlive int, gameField field.Field) string {
+	return fmt.Sprintf("%d %d %s %d %d %d %d", isEnemyField, isAlive, gameField.String(), gameField.GetSpeed(), gameField.GetScore(), gameField.GetCleanCount(), gameField.GetNextPieceType())
 }
