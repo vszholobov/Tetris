@@ -14,8 +14,8 @@ var emptyLine, _ = big.NewInt(0).SetString("100000000001", 2)
 
 type BigIntField struct {
 	Val            *big.Int
-	CurrentPiece   *Piece
-	NextPiece      *Piece
+	CurrentPiece   *bigIntPiece
+	NextPiece      *bigIntPiece
 	Score          *int
 	CleanCount     *int
 	pieceGenerator *rand.Rand
@@ -65,7 +65,7 @@ func (gameField *BigIntField) SelectNextPiece() {
 	} else if pieceTypeRnd == 6 {
 		pieceType = LeftLShape
 	}
-	piece := MakePiece(gameField, pieceType)
+	piece := makePiece(gameField, pieceType)
 	gameField.CurrentPiece = gameField.NextPiece
 	gameField.NextPiece = &piece
 }
@@ -145,15 +145,15 @@ func (gameField *BigIntField) GetNextPieceType() PieceType {
 }
 
 func (gameField *BigIntField) MovePiece(moveDirection PieceMoveDirection) bool {
-	return gameField.CurrentPiece.Move(moveDirection)
+	return gameField.CurrentPiece.move(moveDirection)
 }
 
 func (gameField *BigIntField) CanMovePiece(moveDirection PieceMoveDirection) bool {
-	return gameField.CurrentPiece.CanMove(moveDirection)
+	return gameField.CurrentPiece.canMove(moveDirection)
 }
 
 func (gameField *BigIntField) RotatePiece(rotationType RotationType) bool {
-	return gameField.CurrentPiece.Rotate(rotationType)
+	return gameField.CurrentPiece.rotate(rotationType)
 }
 
 func (gameField *BigIntField) String() string {
