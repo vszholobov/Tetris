@@ -2,13 +2,14 @@ package server
 
 import (
 	"fmt"
-	"github.com/google/uuid"
-	log "github.com/sirupsen/logrus"
 	"math/rand"
 	"sync"
 	"tetrisServer/field"
 	"time"
 	"unicode/utf8"
+
+	"github.com/google/uuid"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/gorilla/websocket"
 )
@@ -21,7 +22,7 @@ type GameSession struct {
 }
 
 type PlayerSession struct {
-	playerField        *field.Field
+	playerField        field.Field
 	conn               *websocket.Conn
 	playerInputChannel chan rune
 	isEnded            bool
@@ -39,9 +40,9 @@ func MakeGameSession() *GameSession {
 }
 
 func MakePlayerSession(conn *websocket.Conn, pieceGenerator *rand.Rand, gameSession *GameSession) *PlayerSession {
-	field := field.MakeDefaultField(pieceGenerator)
+	field := field.MakeField(pieceGenerator)
 	session := PlayerSession{
-		playerField:        &field,
+		playerField:        field,
 		conn:               conn,
 		playerInputChannel: make(chan rune),
 		isEnded:            false,
@@ -101,24 +102,24 @@ func (playerSession *PlayerSession) processGameField() {
 	for {
 		playerSession.inputControl()
 
-		if !gameField.CurrentPiece.MoveDown() {
-			gameField.Val.Or(gameField.Val, gameField.CurrentPiece.GetVal())
+		if !gameField.MovePiece(field.PieceMoveDown) {
+			gameField.ConcatPiece()
 			gameField.SelectNextPiece()
-			if !gameField.CurrentPiece.CanMoveDown() {
+			if !gameField.CanMovePiece(field.PieceMoveDown) {
 				playerSession.endSession(gameField)
 				break
 			}
-			gameField.Clean()
+			gameField.CleanLines()
 		}
 	}
 }
 
-func (playerSession *PlayerSession) endSession(gameField *field.Field) {
+func (playerSession *PlayerSession) endSession(gameField field.Field) {
 	// TODO: race
 	playerSession.isEnded = true
 	if playerSession.EnemySession.isEnded {
-		playerScore := *playerSession.playerField.Score
-		enemyScore := *playerSession.EnemySession.playerField.Score
+		playerScore := playerSession.playerField.GetScore()
+		enemyScore := playerSession.EnemySession.playerField.GetScore()
 
 		if playerScore > enemyScore {
 			playerSession.SendMessage("0 0 WIN!")
@@ -139,7 +140,7 @@ func (playerSession *PlayerSession) endSession(gameField *field.Field) {
 		runningSessionsGauge.Dec()
 	} else {
 		// add last piece to field to not lose it
-		gameField.Val.Or(gameField.Val, gameField.CurrentPiece.GetVal())
+		gameField.ConcatPiece()
 		playerSession.SendMessage(FormatFieldMessage(0, 1, gameField))
 		playerSession.EnemySession.SendMessage(FormatFieldMessage(1, 1, gameField))
 	}
@@ -166,21 +167,16 @@ func (playerSession *PlayerSession) inputControl() {
 		select {
 		case moveType := <-playerSession.playerInputChannel:
 			switch moveType {
-			case 100:
-				// d
-				gameField.CurrentPiece.MoveLeft()
-			case 97:
-				// a
-				gameField.CurrentPiece.MoveRight()
-			case 115:
-				// s
-				gameField.CurrentPiece.MoveDown()
-			case 113:
-				// q
-				gameField.CurrentPiece.Rotate(field.Left)
-			case 101:
-				// e
-				gameField.CurrentPiece.Rotate(field.Right)
+			case 'd':
+				gameField.MovePiece(field.PieceMoveLeft)
+			case 'a':
+				gameField.MovePiece(field.PieceMoveRight)
+			case 's':
+				gameField.MovePiece(field.PieceMoveDown)
+			case 'q':
+				gameField.RotatePiece(field.PieceRotateLeft)
+			case 'e':
+				gameField.RotatePiece(field.PieceRotateRight)
 			}
 		case <-timeout:
 			return
@@ -188,6 +184,6 @@ func (playerSession *PlayerSession) inputControl() {
 	}
 }
 
-func FormatFieldMessage(isEnemyField int, isAlive int, gameField *field.Field) string {
-	return fmt.Sprintf("%d %d %s %d %d %d %d", isEnemyField, isAlive, gameField.String(), gameField.GetSpeed(), *gameField.Score, *gameField.CleanCount, gameField.NextPiece.PieceType)
+func FormatFieldMessage(isEnemyField int, isAlive int, gameField field.Field) string {
+	return fmt.Sprintf("%d %d %s %d %d %d %d", isEnemyField, isAlive, gameField.String(), gameField.GetSpeed(), gameField.GetScore(), gameField.GetCleanCount(), gameField.GetNextPieceType())
 }

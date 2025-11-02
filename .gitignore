@@ -16,3 +16,6 @@
 
 !gifs/
 !gifs/**
+
+client/tetrisClient
+server/tetris-logs

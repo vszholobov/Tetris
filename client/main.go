@@ -36,53 +36,10 @@ type Session struct {
 	isSessionEnded         bool
 }
 
-var addr = "tetris.vszholobov.ru:8080"
-var session *Session
+var serverAddress = "tetris.vszholobov.ru:8080"
+var gameSession *Session
 
-// https://github.com/gorilla/websocket/blob/main/examples/echo/server.go
-func main() {
-	interrupt := make(chan os.Signal, 1)
-	signal.Notify(interrupt, os.Interrupt)
-	handleSigtermExit(interrupt)
-
-	// keyboard
-	keyboard.InitClear()
-	keyboard.CallClear()
-	keyboard.HideCursor()
-
-	inputProcessor := keyboard.MakeInputProcessor()
-	defer inputProcessor.Close()
-	defer keyboard.ShowCursor()
-	go inputProcessor.ProcessKeyboardInput()
-	session = &Session{keyboardInputProcessor: inputProcessor}
-
-	var sessionId string
-	if len(os.Args) < 2 {
-		menu := MakeMenu()
-		menu.showMenu()
-		menu.handleMenu(inputProcessor.GetKeyboardInputTransferChannel())
-		if menu.isExit {
-			onExit("")
-		}
-		if menu.isCreateSession {
-			sessionId = createSession()
-		} else {
-			sessionId = strconv.FormatInt(menu.sessionsList[menu.currentSessionIndex].SessionId, 10)
-		}
-	} else if operation := os.Args[1]; operation == "connect" {
-		sessionId = os.Args[2]
-	} else if operation == "create" {
-		sessionId = createSession()
-	} else if operation == "list" {
-		listSessions := getSessionsList()
-		fmt.Println("Sessions:")
-		for _, session := range listSessions {
-			fmt.Printf("Id: %d Started: %t", session.SessionId, session.Started)
-			fmt.Println()
-		}
-		return
-	} else if operation == "help" {
-		exitMessage := `
+var helpMessage = `
 Run client menu by launching the application without arguments
 List of control keys:
 1) Menu
@@ -104,33 +61,72 @@ It is also available to run the client with command line arguments
 * create              - create new session
 * list                - show list of existing sessions
 `
-		onExit(exitMessage)
+
+func main() {
+	outputController := keyboard.InitOutputController()
+	handleSigtermExit(outputController)
+
+	outputController.HideCursor()
+	defer outputController.ShowCursor()
+
+	inputProcessor := keyboard.MakeInputProcessor()
+	defer inputProcessor.Close()
+
+	go inputProcessor.ProcessKeyboardInput()
+	gameSession = &Session{keyboardInputProcessor: inputProcessor}
+
+	var sessionId string
+	if len(os.Args) < 2 {
+		menu := MakeMenu(outputController)
+		menu.showMenu()
+		menu.handleMenu(inputProcessor.GetKeyboardInputTransferChannel())
+		if menu.isExit {
+			onExit("", outputController)
+		}
+		if menu.isCreateSession {
+			sessionId = createSession()
+		} else {
+			sessionId = strconv.FormatInt(menu.sessionsList[menu.currentSessionIndex].SessionId, 10)
+		}
+	} else if operation := os.Args[1]; operation == "connect" {
+		sessionId = os.Args[2]
+	} else if operation == "create" {
+		sessionId = createSession()
+	} else if operation == "list" {
+		listSessions := getSessionsList()
+		fmt.Println("Sessions:")
+		for _, session := range listSessions {
+			fmt.Printf("Id: %d Started: %t", session.SessionId, session.Started)
+			fmt.Println()
+		}
+		return
+	} else if operation == "help" {
+		onExit(helpMessage, outputController)
 		return
 	} else {
-		onExit("Operation '" + operation + "' does not exist. See full list by running 'help' operation")
+		onExit("Operation '"+operation+"' does not exist. See full list by running 'help' operation", outputController)
 		return
 	}
-	sessionConnectUrl := url.URL{Scheme: "ws", Host: addr, Path: "/session/connect/" + sessionId}
+	sessionConnectUrl := url.URL{Scheme: "ws", Host: serverAddress, Path: "/session/connect/" + sessionId}
 
 	connect, _, _ := websocket.DefaultDialer.Dial(sessionConnectUrl.String(), nil)
 	connect.SetPingHandler(func(appData string) error {
 		return connect.WriteControl(websocket.PongMessage, []byte(appData), time.Now().Add(time.Second*10))
 	})
 	connect.SetCloseHandler(func(code int, text string) error {
-		onExit(strconv.Itoa(code))
+		onExit(strconv.Itoa(code), outputController)
 		return nil
 	})
-	session.conn = connect
-	defer session.conn.Close()
+	gameSession.conn = connect
+	defer gameSession.conn.Close()
 	fmt.Println("SessionId: " + sessionId)
 
-	// TODO: exit on interrupt message
-	go readProcessor(connect)
-	sendProcessor(connect, interrupt, inputProcessor.GetKeyboardInputTransferChannel())
+	go readProcessor(connect, outputController)
+	sendProcessor(connect, inputProcessor.GetKeyboardInputTransferChannel())
 }
 
 func createSession() string {
-	response, createSessionError := http.Get("http://" + addr + "/session/create")
+	response, createSessionError := http.Get("http://" + serverAddress + "/session/create")
 	if createSessionError != nil {
 		panic(createSessionError.Error())
 	}
@@ -146,7 +142,7 @@ func createSession() string {
 }
 
 func getSessionsList() []SessionDto {
-	response, getSessionsListError := http.Get("http://" + addr + "/session")
+	response, getSessionsListError := http.Get("http://" + serverAddress + "/session")
 	if getSessionsListError != nil {
 		panic(getSessionsListError.Error())
 	}
@@ -162,32 +158,29 @@ func getSessionsList() []SessionDto {
 
 func sendProcessor(
 	c *websocket.Conn,
-	interrupt chan os.Signal,
 	keyboardSendChannel chan rune,
 ) {
-	for {
-		select {
-		case messageFromKeyboard := <-keyboardSendChannel:
-			err := c.WriteMessage(websocket.TextMessage, []byte(string(messageFromKeyboard)))
-			if err != nil {
-				// log.Println("write:", err)
-				return
-			}
-		case <-interrupt:
+	for messageFromKeyboard := range keyboardSendChannel {
+		err := c.WriteMessage(websocket.TextMessage, []byte(string(messageFromKeyboard)))
+		if err != nil {
+			// log.Println("write:", err)
 			return
 		}
 	}
 }
 
-func handleSigtermExit(interrupt chan os.Signal) {
+// Handles interrupt signal
+func handleSigtermExit(outputController *keyboard.OutputController) {
+	interrupt := make(chan os.Signal, 1)
+	signal.Notify(interrupt, os.Interrupt)
 	go func() {
 		<-interrupt
-		onExit("")
+		onExit("", outputController)
 	}()
 }
 
 // readProcessor server handler
-func readProcessor(c *websocket.Conn) {
+func readProcessor(c *websocket.Conn, outputController *keyboard.OutputController) {
 	func() {
 		for {
 			_, message, err := c.ReadMessage()
@@ -200,7 +193,7 @@ func readProcessor(c *websocket.Conn) {
 			if fields[0] == "0" {
 				// self field
 				if fields[1] == "0" {
-					onExit(fields[2])
+					onExit(fields[2], outputController)
 				}
 				field, _ := big.NewInt(0).SetString(string(fields[2]), 10)
 				speed := fields[3]
@@ -222,36 +215,36 @@ func readProcessor(c *websocket.Conn) {
 				nextPieceType := PieceType(nextPieceTypeIntRepr)
 				PrintEnemyField(field, speed, score, cleanCount, nextPieceType)
 			} else {
-				session.pingMs, _ = strconv.ParseUint(fields[1], 10, 64)
+				gameSession.pingMs, _ = strconv.ParseUint(fields[1], 10, 64)
 			}
 		}
 	}()
 }
 
 func getPingRepresentation() string {
-	if session.pingMs < 1000 {
-		return strconv.FormatUint(session.pingMs, 10) + "ms"
+	if gameSession.pingMs < 1000 {
+		return strconv.FormatUint(gameSession.pingMs, 10) + "ms"
 	} else {
-		return fmt.Sprintf("%.1fs", float64(session.pingMs)/1000)
+		return fmt.Sprintf("%.1fs", float64(gameSession.pingMs)/1000)
 	}
 }
 
 // onExit Closes keyboard input stream and makes cursor visible back
-func onExit(exitMessage string) {
-	session.endSessionMutex.Lock()
-	if !session.isSessionEnded {
-		session.isSessionEnded = true
-		keyboard.ShowCursor()
-		keyboard.CallClear()
+func onExit(exitMessage string, outputController *keyboard.OutputController) {
+	gameSession.endSessionMutex.Lock()
+	if !gameSession.isSessionEnded {
+		gameSession.isSessionEnded = true
+		outputController.ShowCursor()
+		outputController.Clear()
 		fmt.Println(exitMessage)
-		if session.keyboardInputProcessor != nil {
-			session.keyboardInputProcessor.Close()
+		if gameSession.keyboardInputProcessor != nil {
+			gameSession.keyboardInputProcessor.Close()
 		}
-		if session.conn != nil {
-			session.conn.Close()
+		if gameSession.conn != nil {
+			gameSession.conn.Close()
 		}
 	}
-	session.endSessionMutex.Unlock()
+	gameSession.endSessionMutex.Unlock()
 	os.Exit(0)
 }
 
@@ -261,9 +254,10 @@ type Menu struct {
 	isEnded             bool
 	isCreateSession     bool
 	isExit              bool
+	outputController    *keyboard.OutputController
 }
 
-func MakeMenu() Menu {
+func MakeMenu(outputController *keyboard.OutputController) Menu {
 	sessionsList := getSessionsList()
 	return Menu{
 		currentSessionIndex: 0,
@@ -271,11 +265,12 @@ func MakeMenu() Menu {
 		isEnded:             false,
 		isCreateSession:     false,
 		isExit:              false,
+		outputController:    outputController,
 	}
 }
 
 func (menu *Menu) showMenu() {
-	keyboard.CallClear()
+	menu.outputController.Clear()
 	fmt.Println(" Tetris🕹️")
 	fmt.Println("----------")
 	for index, session := range menu.sessionsList {
