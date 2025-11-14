@@ -4,6 +4,10 @@ import (
 	"math/rand"
 )
 
+const FieldWidth = 12
+const FieldHeight = 21
+const CleanRowsCountToIncreaseSpeed = 12
+
 type Field interface {
 	SelectNextPiece()
 	CleanLines()

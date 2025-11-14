@@ -5,10 +5,6 @@ import (
 	"math/rand"
 )
 
-const FieldWidth = 12
-const FieldHeight = 21
-const CleanRowsCountToIncreaseSpeed = 40
-
 var fullLine, _ = big.NewInt(0).SetString("111111111111", 2)
 var emptyLine, _ = big.NewInt(0).SetString("100000000001", 2)
 
