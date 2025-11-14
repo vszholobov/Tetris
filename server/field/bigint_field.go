@@ -118,12 +118,6 @@ func (gameField *BigIntField) CleanLines() {
 	gameField.Val.Or(gameField.Val, restField)
 }
 
-func (gameField *BigIntField) intersects(pieceVal *big.Int) bool {
-	newField := big.NewInt(0).Set(gameField.Val)
-	newShape := big.NewInt(0).Set(pieceVal)
-	return newField.And(newField, newShape).Cmp(big.NewInt(0)) != 0
-}
-
 func (gameField *BigIntField) ConcatPiece() {
 	gameField.Val.Or(gameField.Val, gameField.CurrentPiece.getVal())
 }
@@ -159,4 +153,10 @@ func (gameField *BigIntField) RotatePiece(rotationType RotationType) bool {
 func (gameField *BigIntField) String() string {
 	newField := big.NewInt(0).Or(gameField.Val, gameField.CurrentPiece.getVal())
 	return newField.String()
+}
+
+func (gameField *BigIntField) intersects(pieceVal *big.Int) bool {
+	newField := big.NewInt(0).Set(gameField.Val)
+	newShape := big.NewInt(0).Set(pieceVal)
+	return newField.And(newField, newShape).Cmp(big.NewInt(0)) != 0
 }

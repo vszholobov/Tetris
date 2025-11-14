@@ -92,10 +92,10 @@ type bigIntPiece struct {
 	rotationCount int
 	PieceType     PieceType
 	rotations     []*big.Int
-	field         Field
+	field         *BigIntField
 }
 
-func makePiece(field Field, pieceType PieceType) bigIntPiece {
+func makePiece(field *BigIntField, pieceType PieceType) bigIntPiece {
 	rotations := rotationsByType[pieceType]
 	rotationsCopy := copyRotations(rotations)
 	return bigIntPiece{

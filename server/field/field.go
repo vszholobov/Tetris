@@ -1,7 +1,6 @@
 package field
 
 import (
-	"math/big"
 	"math/rand"
 )
 
@@ -17,7 +16,6 @@ type Field interface {
 	GetCleanCount() int
 	GetNextPieceType() PieceType
 	String() string
-	intersects(pieceVal *big.Int) bool
 }
 
 func MakeField(pieceGenerator *rand.Rand) Field {
