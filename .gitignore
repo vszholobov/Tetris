@@ -17,5 +17,8 @@
 !gifs/
 !gifs/**
 
+!lib/
+!lib/**
+
 client/tetrisClient
-server/tetris-logs
+server/tetris-logs 
