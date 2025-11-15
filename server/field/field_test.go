@@ -17,7 +17,7 @@ func (ps fixedPieceSelector) SelectNextPiece() lib.PieceType {
 	return ps.pieceType
 }
 
-var N = flag.Int("N", 10, "Tests iterations count")
+var N = flag.Int("N", 10000, "Tests iterations count")
 
 func TestMain(m *testing.M) {
 	flag.Parse()
@@ -110,5 +110,4 @@ func TestTopBorderClosed(t *testing.T) {
 			t.Errorf("Can rotate piece %d right", pieceType)
 		}
 	}
-
 }
