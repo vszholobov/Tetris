@@ -5,13 +5,15 @@ import (
 	"os"
 	"strings"
 	"testing"
+
+	lib "github.com/vszholobov/tetrisLib"
 )
 
 type fixedPieceSelector struct {
-	pieceType PieceType
+	pieceType lib.PieceType
 }
 
-func (ps fixedPieceSelector) SelectNextPiece() PieceType {
+func (ps fixedPieceSelector) SelectNextPiece() lib.PieceType {
 	return ps.pieceType
 }
 
@@ -23,7 +25,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestFillBottomAndClean(t *testing.T) {
-	field := MakeDefaultField(fixedPieceSelector{pieceType: IShape})
+	field := MakeDefaultField(fixedPieceSelector{pieceType: lib.IShape})
 
 	startFieldRepr := field.String()
 	expectedCleanCount := 4
@@ -92,7 +94,7 @@ func TestTopBorderClosed(t *testing.T) {
 111111111111
 `, "\n", "")
 
-	for pieceType := PieceType(0); int(pieceType) < PieceTypeCount; pieceType++ {
+	for pieceType := lib.PieceType(0); int(pieceType) < lib.PieceTypeCount; pieceType++ {
 		field := MakeField(fixedPieceSelector{pieceType: pieceType}, closedFieldString)
 		for pieceMoveDirection := PieceMoveDirection(0); int(pieceMoveDirection) < PieceMoveDirectionCount; pieceMoveDirection++ {
 			if field.CanMovePiece(pieceMoveDirection) {

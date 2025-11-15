@@ -2,6 +2,8 @@ package field
 
 import (
 	"math/big"
+
+	lib "github.com/vszholobov/tetrisLib"
 )
 
 var fullLine, _ = big.NewInt(0).SetString("111111111111", 2)
@@ -97,7 +99,7 @@ func (gameField *BigIntField) GetCleanCount() int {
 	return *gameField.CleanCount
 }
 
-func (gameField *BigIntField) GetNextPieceType() PieceType {
+func (gameField *BigIntField) GetNextPieceType() lib.PieceType {
 	return gameField.NextPiece.PieceType
 }
 

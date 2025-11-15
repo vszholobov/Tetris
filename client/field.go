@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"math/big"
 	"strings"
+
+	lib "github.com/vszholobov/tetrisLib"
 )
 
 const FieldWidth = 12
@@ -14,29 +16,17 @@ const moveRightEnemyFieldASCII = "\r\033[52C"
 const moveDownOneLineASCII = "\r\033[1B"
 const moveDownAllLinesASCII = "\r\033[17B"
 
-type PieceType int
-
-const (
-	TShape      PieceType = 0
-	ZigZagLeft  PieceType = 1
-	ZigZagRight PieceType = 2
-	RightLShape PieceType = 3
-	LeftLShape  PieceType = 4
-	IShape      PieceType = 5
-	SquareShape PieceType = 6
-)
-
-var RepresentationByType = map[PieceType][]string{
-	TShape:      {"      Ж     ", "     ЖЖЖ    "},
-	ZigZagRight: {"      ЖЖ    ", "     ЖЖ     "},
-	ZigZagLeft:  {"     ЖЖ     ", "      ЖЖ    "},
-	IShape:      {"    ЖЖЖЖ    "},
-	RightLShape: {"    ЖЖЖ     ", "    Ж       "},
-	LeftLShape:  {"    ЖЖЖ     ", "      Ж     "},
-	SquareShape: {"     ЖЖ     ", "     ЖЖ     "},
+var RepresentationByType = map[lib.PieceType][]string{
+	lib.TShape:      {"      Ж     ", "     ЖЖЖ    "},
+	lib.ZigZagRight: {"      ЖЖ    ", "     ЖЖ     "},
+	lib.ZigZagLeft:  {"     ЖЖ     ", "      ЖЖ    "},
+	lib.IShape:      {"    ЖЖЖЖ    "},
+	lib.RightLShape: {"    ЖЖЖ     ", "    Ж       "},
+	lib.LeftLShape:  {"    ЖЖЖ     ", "      Ж     "},
+	lib.SquareShape: {"     ЖЖ     ", "     ЖЖ     "},
 }
 
-func PrintEnemyField(field *big.Int, speed string, score string, cleanCount string, nextPieceType PieceType) {
+func PrintEnemyField(field *big.Int, speed string, score string, cleanCount string, nextPieceType lib.PieceType) {
 	fieldStr := fmt.Sprintf("%b", field)
 	fmt.Print(moveToTopASCII)
 	fmt.Print(moveRightEnemyFieldASCII)
@@ -66,7 +56,7 @@ func PrintSelfField(
 	speed string,
 	score string,
 	cleanCount string,
-	nextPieceType PieceType,
+	nextPieceType lib.PieceType,
 	pingMs string,
 ) {
 	fieldStr := fmt.Sprintf("%b", field)
@@ -93,7 +83,7 @@ func PrintSelfField(
 	printNextPiece(nextPieceType)
 }
 
-func printNextPiece(nextPieceType PieceType) {
+func printNextPiece(nextPieceType lib.PieceType) {
 	fmt.Print(moveToTopASCII + moveRightASCII + " ##############")
 	fmt.Printf(moveDownOneLineASCII + moveRightASCII + " #            #")
 	pieceLines := RepresentationByType[nextPieceType]

@@ -4,6 +4,9 @@ FROM golang:${GO_VERSION}-alpine AS build
 WORKDIR /app
 
 COPY . .
+
+WORKDIR /app/server
+
 RUN go mod download
 
 RUN GOOS=linux go build -o ./tetrisServer
@@ -13,7 +16,7 @@ FROM alpine:latest
 ENV GOPATH=/app
 
 # Copy the binary from the first stage.
-COPY --from=build ${GOPATH}/tetrisServer ./tetrisServer
+COPY --from=build ${GOPATH}/server/tetrisServer ./tetrisServer
 RUN chmod u+x ./tetrisServer
 
 # Set the run command.

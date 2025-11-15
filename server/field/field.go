@@ -1,6 +1,10 @@
 package field
 
-import "strings"
+import (
+	"strings"
+
+	lib "github.com/vszholobov/tetrisLib"
+)
 
 const FieldWidth = 12
 const FieldHeight = 21
@@ -16,7 +20,7 @@ type Field interface {
 	GetSpeed() int
 	GetScore() int
 	GetCleanCount() int
-	GetNextPieceType() PieceType
+	GetNextPieceType() lib.PieceType
 	String() string
 }
 

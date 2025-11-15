@@ -5,7 +5,10 @@ go 1.21
 require (
 	github.com/gorilla/mux v1.8.1
 	github.com/gorilla/websocket v1.5.1
+	github.com/vszholobov/tetrisLib v0.0.0
 )
+
+replace github.com/vszholobov/tetrisLib => ../lib
 
 require (
 	github.com/beorn7/perks v1.0.1 // indirect

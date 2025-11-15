@@ -1,6 +1,10 @@
 package field
 
-import "math/big"
+import (
+	"math/big"
+
+	lib "github.com/vszholobov/tetrisLib"
+)
 
 // []
 //000001100000
@@ -78,24 +82,24 @@ import "math/big"
 //000000110000
 //000000100000 = 537067552
 
-var rotationsByType = map[PieceType][]*big.Int{
-	TShape:      {big.NewInt(458784), big.NewInt(537067552), big.NewInt(537329664), big.NewInt(537264160)},
-	ZigZagLeft:  {big.NewInt(196704), big.NewInt(1074135072)},
-	ZigZagRight: {big.NewInt(393264), big.NewInt(537264192)},
-	IShape:      {big.NewInt(240), big.NewInt(4399120515136)},
-	RightLShape: {big.NewInt(524512), big.NewInt(1074004160), big.NewInt(917536), big.NewInt(3221749888)},
-	LeftLShape:  {big.NewInt(131296), big.NewInt(1610743840), big.NewInt(917632), big.NewInt(1074004064)},
-	SquareShape: {big.NewInt(393312)},
+var rotationsByType = map[lib.PieceType][]*big.Int{
+	lib.TShape:      {big.NewInt(458784), big.NewInt(537067552), big.NewInt(537329664), big.NewInt(537264160)},
+	lib.ZigZagLeft:  {big.NewInt(196704), big.NewInt(1074135072)},
+	lib.ZigZagRight: {big.NewInt(393264), big.NewInt(537264192)},
+	lib.IShape:      {big.NewInt(240), big.NewInt(4399120515136)},
+	lib.RightLShape: {big.NewInt(524512), big.NewInt(1074004160), big.NewInt(917536), big.NewInt(3221749888)},
+	lib.LeftLShape:  {big.NewInt(131296), big.NewInt(1610743840), big.NewInt(917632), big.NewInt(1074004064)},
+	lib.SquareShape: {big.NewInt(393312)},
 }
 
 type bigIntPiece struct {
 	rotationCount int
-	PieceType     PieceType
+	PieceType     lib.PieceType
 	rotations     []*big.Int
 	field         *BigIntField
 }
 
-func makePiece(field *BigIntField, pieceType PieceType) bigIntPiece {
+func makePiece(field *BigIntField, pieceType lib.PieceType) bigIntPiece {
 	rotations := rotationsByType[pieceType]
 	rotationsCopy := copyRotations(rotations)
 	return bigIntPiece{

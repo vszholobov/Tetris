@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	lib "github.com/vszholobov/tetrisLib"
 )
 
 type CreateSessionResponse struct {
@@ -197,7 +198,7 @@ func readProcessor(c *websocket.Conn, outputController *keyboard.OutputControlle
 				score := fields[4]
 				cleanCount := fields[5]
 				nextPieceTypeIntRepr, _ := strconv.Atoi(fields[6])
-				nextPieceType := PieceType(nextPieceTypeIntRepr)
+				nextPieceType := lib.PieceType(nextPieceTypeIntRepr)
 				PrintSelfField(field, speed, score, cleanCount, nextPieceType, getPingRepresentation())
 			} else if fields[0] == "1" {
 				// enemy field
@@ -209,7 +210,7 @@ func readProcessor(c *websocket.Conn, outputController *keyboard.OutputControlle
 				score := fields[4]
 				cleanCount := fields[5]
 				nextPieceTypeIntRepr, _ := strconv.Atoi(fields[6])
-				nextPieceType := PieceType(nextPieceTypeIntRepr)
+				nextPieceType := lib.PieceType(nextPieceTypeIntRepr)
 				PrintEnemyField(field, speed, score, cleanCount, nextPieceType)
 			} else {
 				gameSession.pingMs, _ = strconv.ParseUint(fields[1], 10, 64)
