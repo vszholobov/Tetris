@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"math/big"
 	"net/http"
 	"net/url"
@@ -185,9 +184,7 @@ func readProcessor(c *websocket.Conn, outputController *keyboard.OutputControlle
 		for {
 			_, message, err := c.ReadMessage()
 			if err != nil {
-				// TODO: если закрыли сокет, то попадем сюда. Нужно обработать и завершить без ошибки
-				log.Println("read:", err)
-				return
+				onExit("Connection closed(", outputController)
 			}
 			fields := strings.Fields(string(message))
 			if fields[0] == "0" {
