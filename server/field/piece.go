@@ -4,6 +4,8 @@ import "math/rand"
 
 type PieceType int
 
+var PieceTypeCount int = 7
+
 const (
 	TShape      PieceType = 0
 	ZigZagLeft  PieceType = 1
@@ -33,6 +35,8 @@ const (
 
 type PieceMoveDirection int
 
+var PieceMoveDirectionCount int = 3
+
 const (
 	PieceMoveLeft  PieceMoveDirection = 0
 	PieceMoveRight PieceMoveDirection = 1
@@ -52,7 +56,7 @@ func MakePieceSelector(random *rand.Rand) PieceSelector {
 }
 
 func (ps *DefaultPieceSelector) SelectNextPiece() PieceType {
-	random := ps.random.Intn(7)
+	random := ps.random.Intn(PieceTypeCount)
 	switch random {
 	case 0:
 		return IShape

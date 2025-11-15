@@ -158,6 +158,10 @@ func (piece *bigIntPiece) move(moveDirection PieceMoveDirection) bool {
 func (piece *bigIntPiece) canMove(moveDirection PieceMoveDirection) bool {
 	newPieceVal := big.NewInt(0).Set(piece.getVal())
 
+	if piece.field.intersects(newPieceVal) {
+		return false
+	}
+
 	switch moveDirection {
 	case PieceMoveLeft:
 		newPieceVal.Rsh(newPieceVal, 1)

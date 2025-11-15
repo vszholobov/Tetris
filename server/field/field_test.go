@@ -3,13 +3,16 @@ package field
 import (
 	"flag"
 	"os"
+	"strings"
 	"testing"
 )
 
-type alwaysIShapePieceSelector struct{}
+type fixedPieceSelector struct {
+	pieceType PieceType
+}
 
-func (ps alwaysIShapePieceSelector) SelectNextPiece() PieceType {
-	return IShape
+func (ps fixedPieceSelector) SelectNextPiece() PieceType {
+	return ps.pieceType
 }
 
 var N = flag.Int("N", 10, "Tests iterations count")
@@ -20,7 +23,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestFillBottomAndClean(t *testing.T) {
-	field := MakeDefaultField(alwaysIShapePieceSelector{})
+	field := MakeDefaultField(fixedPieceSelector{pieceType: IShape})
 
 	startFieldRepr := field.String()
 	expectedCleanCount := 4
@@ -62,4 +65,48 @@ func TestFillBottomAndClean(t *testing.T) {
 	if startFieldRepr != endFieldRepr {
 		t.Errorf("Field changed. StartRepr `%s`. End Repr `%s`", startFieldRepr, endFieldRepr)
 	}
+}
+
+func TestTopBorderClosed(t *testing.T) {
+	var closedFieldString = strings.ReplaceAll(`
+111111111111
+100000000001
+100000000001
+100000000001
+100000000001
+100000000001
+100000000001
+100000000001
+100000000001
+100000000001
+100000000001
+100000000001
+100000000001
+100000000001
+100000000001
+100000000001
+100000000001
+100000000001
+100000000001
+100000000001
+111111111111
+`, "\n", "")
+
+	for pieceType := PieceType(0); int(pieceType) < PieceTypeCount; pieceType++ {
+		field := MakeField(fixedPieceSelector{pieceType: pieceType}, closedFieldString)
+		for pieceMoveDirection := PieceMoveDirection(0); int(pieceMoveDirection) < PieceMoveDirectionCount; pieceMoveDirection++ {
+			if field.CanMovePiece(pieceMoveDirection) {
+				t.Errorf("Can move piece %d in direction %d", pieceType, pieceMoveDirection)
+			}
+		}
+		rotatedLeft := field.RotatePiece(PieceRotateLeft)
+		if rotatedLeft {
+			t.Errorf("Can rotate piece %d left", pieceType)
+		}
+		rotatedRight := field.RotatePiece(PieceRotateRight)
+		if rotatedRight {
+			t.Errorf("Can rotate piece %d right", pieceType)
+		}
+	}
+
 }
