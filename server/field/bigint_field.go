@@ -16,29 +16,8 @@ type BigIntField struct {
 	pieceSelector PieceSelector
 }
 
-func makeBigIntField(pieceSelector PieceSelector) *BigIntField {
-	fieldVal, _ := big.NewInt(0).SetString(
-		"111111111111"+
-			"100000000001"+
-			"100000000001"+
-			"100000000001"+
-			"100000000001"+
-			"100000000001"+
-			"100000000001"+
-			"100000000001"+
-			"100000000001"+
-			"100000000001"+
-			"100000000001"+
-			"100000000001"+
-			"100000000001"+
-			"100000000001"+
-			"100000000001"+
-			"100000000001"+
-			"100000000001"+
-			"100000000001"+
-			"100000000001"+
-			"100000000001"+
-			"100000000001", 2)
+func makeBigIntField(pieceSelector PieceSelector, fieldString string) *BigIntField {
+	fieldVal, _ := big.NewInt(0).SetString(fieldString, 2)
 	return &BigIntField{
 		Val:           fieldVal,
 		Score:         new(int),

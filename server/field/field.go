@@ -1,5 +1,7 @@
 package field
 
+import "strings"
+
 const FieldWidth = 12
 const FieldHeight = 21
 const CleanRowsCountToIncreaseSpeed = 12
@@ -18,8 +20,36 @@ type Field interface {
 	String() string
 }
 
-func MakeField(pieceSelector PieceSelector) Field {
-	gameField := makeBigIntField(pieceSelector)
+var defaultFieldString = strings.ReplaceAll(`
+111111111111
+100000000001
+100000000001
+100000000001
+100000000001
+100000000001
+100000000001
+100000000001
+100000000001
+100000000001
+100000000001
+100000000001
+100000000001
+100000000001
+100000000001
+100000000001
+100000000001
+100000000001
+100000000001
+100000000001
+100000000001
+`, "\n", "")
+
+func MakeDefaultField(pieceSelector PieceSelector) Field {
+	return MakeField(pieceSelector, defaultFieldString)
+}
+
+func MakeField(pieceSelector PieceSelector, fieldVal string) Field {
+	gameField := makeBigIntField(pieceSelector, fieldVal)
 	gameField.SelectNextPiece()
 	gameField.SelectNextPiece()
 	return gameField
