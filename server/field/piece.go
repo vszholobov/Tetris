@@ -1,5 +1,7 @@
 package field
 
+import "math/rand"
+
 type PieceType int
 
 const (
@@ -36,3 +38,37 @@ const (
 	PieceMoveRight PieceMoveDirection = 1
 	PieceMoveDown  PieceMoveDirection = 2
 )
+
+type PieceSelector interface {
+	SelectNextPiece() PieceType
+}
+
+type DefaultPieceSelector struct {
+	random *rand.Rand
+}
+
+func MakePieceSelector(random *rand.Rand) PieceSelector {
+	return &DefaultPieceSelector{random: random}
+}
+
+func (ps *DefaultPieceSelector) SelectNextPiece() PieceType {
+	random := ps.random.Intn(7)
+	switch random {
+	case 0:
+		return IShape
+	case 1:
+		return RightLShape
+	case 2:
+		return TShape
+	case 3:
+		return ZigZagRight
+	case 4:
+		return ZigZagLeft
+	case 5:
+		return SquareShape
+	case 6:
+		return LeftLShape
+	default:
+		panic("Unknown piece type")
+	}
+}

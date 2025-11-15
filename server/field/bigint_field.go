@@ -2,22 +2,21 @@ package field
 
 import (
 	"math/big"
-	"math/rand"
 )
 
 var fullLine, _ = big.NewInt(0).SetString("111111111111", 2)
 var emptyLine, _ = big.NewInt(0).SetString("100000000001", 2)
 
 type BigIntField struct {
-	Val            *big.Int
-	CurrentPiece   *bigIntPiece
-	NextPiece      *bigIntPiece
-	Score          *int
-	CleanCount     *int
-	pieceGenerator *rand.Rand
+	Val           *big.Int
+	CurrentPiece  *bigIntPiece
+	NextPiece     *bigIntPiece
+	Score         *int
+	CleanCount    *int
+	pieceSelector PieceSelector
 }
 
-func makeBigIntField(pieceGenerator *rand.Rand) *BigIntField {
+func makeBigIntField(pieceSelector PieceSelector) *BigIntField {
 	fieldVal, _ := big.NewInt(0).SetString(
 		"111111111111"+
 			"100000000001"+
@@ -40,27 +39,16 @@ func makeBigIntField(pieceGenerator *rand.Rand) *BigIntField {
 			"100000000001"+
 			"100000000001"+
 			"100000000001", 2)
-	return &BigIntField{Val: fieldVal, Score: new(int), CleanCount: new(int), pieceGenerator: pieceGenerator}
+	return &BigIntField{
+		Val:           fieldVal,
+		Score:         new(int),
+		CleanCount:    new(int),
+		pieceSelector: pieceSelector,
+	}
 }
 
 func (gameField *BigIntField) SelectNextPiece() {
-	pieceTypeRnd := gameField.pieceGenerator.Intn(7)
-	var pieceType PieceType
-	if pieceTypeRnd == 0 {
-		pieceType = IShape
-	} else if pieceTypeRnd == 1 {
-		pieceType = RightLShape
-	} else if pieceTypeRnd == 2 {
-		pieceType = TShape
-	} else if pieceTypeRnd == 3 {
-		pieceType = ZigZagRight
-	} else if pieceTypeRnd == 4 {
-		pieceType = ZigZagLeft
-	} else if pieceTypeRnd == 5 {
-		pieceType = SquareShape
-	} else if pieceTypeRnd == 6 {
-		pieceType = LeftLShape
-	}
+	pieceType := gameField.pieceSelector.SelectNextPiece()
 	piece := makePiece(gameField, pieceType)
 	gameField.CurrentPiece = gameField.NextPiece
 	gameField.NextPiece = &piece

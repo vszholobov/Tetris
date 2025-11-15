@@ -40,7 +40,8 @@ func MakeGameSession() *GameSession {
 }
 
 func MakePlayerSession(conn *websocket.Conn, pieceGenerator *rand.Rand, gameSession *GameSession) *PlayerSession {
-	field := field.MakeField(pieceGenerator)
+	pieceSelector := field.MakePieceSelector(pieceGenerator)
+	field := field.MakeField(pieceSelector)
 	session := PlayerSession{
 		playerField:        field,
 		conn:               conn,
