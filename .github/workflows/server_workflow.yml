@@ -32,7 +32,7 @@ jobs:
       - name: Run tests
         run: |
           cd server
-          go test -v -count=1 ./...
+          go test -v -count=1 -race ./...
 
   build:
     name: Build and Push Docker Image

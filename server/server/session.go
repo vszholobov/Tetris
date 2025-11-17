@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/rand"
 	"sync"
+	"sync/atomic"
 	"tetrisServer/field"
 	"time"
 	"unicode/utf8"
@@ -19,13 +20,23 @@ type GameSession struct {
 	FirstPlayerSession  *PlayerSession
 	SecondPlayerSession *PlayerSession
 	Started             bool
+	someEnded           atomic.Bool
+}
+
+type WSConn interface {
+	WriteMessage(messageType int, data []byte) error
+	ReadMessage() (messageType int, p []byte, err error)
+	SetWriteDeadline(t time.Time) error
+	SetReadDeadline(t time.Time) error
+	Close() error
+	SetPongHandler(func(appData string) error)
 }
 
 type PlayerSession struct {
 	playerField        field.Field
-	conn               *websocket.Conn
+	conn               WSConn
 	playerInputChannel chan rune
-	isEnded            bool
+	isEnded            atomic.Bool
 	pieceGenerator     *rand.Rand
 	EnemySession       *PlayerSession
 	mu                 sync.Mutex
@@ -46,7 +57,6 @@ func MakePlayerSession(conn *websocket.Conn, pieceGenerator *rand.Rand, gameSess
 		playerField:        field,
 		conn:               conn,
 		playerInputChannel: make(chan rune),
-		isEnded:            false,
 		pieceGenerator:     pieceGenerator,
 		gameSession:        gameSession,
 	}
@@ -107,7 +117,7 @@ func (playerSession *PlayerSession) processGameField() {
 			gameField.ConcatPiece()
 			gameField.SelectNextPiece()
 			if !gameField.CanMovePiece(field.PieceMoveDown) {
-				playerSession.endSession(gameField)
+				playerSession.endSession()
 				break
 			}
 			gameField.CleanLines()
@@ -115,10 +125,15 @@ func (playerSession *PlayerSession) processGameField() {
 	}
 }
 
-func (playerSession *PlayerSession) endSession(gameField field.Field) {
-	// TODO: race
-	playerSession.isEnded = true
-	if playerSession.EnemySession.isEnded {
+func (playerSession *PlayerSession) endSession() {
+	playerSession.isEnded.Store(true)
+	if playerSession.gameSession.someEnded.CompareAndSwap(false, true) {
+		gameField := playerSession.playerField
+		// add last piece to field to not lose it
+		gameField.ConcatPiece()
+		playerSession.SendMessage(FormatFieldMessage(0, 1, gameField))
+		playerSession.EnemySession.SendMessage(FormatFieldMessage(1, 1, gameField))
+	} else {
 		playerScore := playerSession.playerField.GetScore()
 		enemyScore := playerSession.EnemySession.playerField.GetScore()
 
@@ -139,16 +154,11 @@ func (playerSession *PlayerSession) endSession(gameField field.Field) {
 		delete(Sessions, sessionId)
 		log.Infof("Session %d ended", sessionId)
 		runningSessionsGauge.Dec()
-	} else {
-		// add last piece to field to not lose it
-		gameField.ConcatPiece()
-		playerSession.SendMessage(FormatFieldMessage(0, 1, gameField))
-		playerSession.EnemySession.SendMessage(FormatFieldMessage(1, 1, gameField))
 	}
 }
 
 func (playerSession *PlayerSession) processPlayerInput() {
-	for !playerSession.isEnded {
+	for !playerSession.isEnded.Load() {
 		// TODO: ticker чтобы не зависнуть когда сессия закончилась
 		_, message, err := playerSession.conn.ReadMessage()
 		if err != nil {
