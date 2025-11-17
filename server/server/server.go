@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"math/rand"
 	"net/http"
 	"strconv"
 	"time"
@@ -84,25 +83,29 @@ func GetSessionsList(w http.ResponseWriter, r *http.Request) {
 	sessionDtos := make([]SessionDto, 0)
 	for sessionId := range Sessions {
 		session := Sessions[sessionId]
-		sessionDtos = append(sessionDtos, SessionDto{SessionId: sessionId, Started: session.Started})
+		sessionDtos = append(sessionDtos, SessionDto{SessionId: sessionId, Started: session.started.Load()})
 	}
 	json.NewEncoder(w).Encode(sessionDtos)
 }
 
 func CreateSession(w http.ResponseWriter, r *http.Request) {
-	gameSession := MakeGameSession()
-	Sessions[gameSession.GetSessionId()] = gameSession
-	response := CreateSessionResponse{SessionId: gameSession.GetSessionId()}
+	gameSession := makeGameSession()
+	Sessions[gameSession.sessionId] = gameSession
+	createdSessionsCounter.Inc()
+	log.Infof("Session %d created", gameSession.sessionId)
+	response := CreateSessionResponse{SessionId: gameSession.sessionId}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
 }
 
 func ConnectToSession(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	sessionId, _ := strconv.ParseInt(vars["sessionId"], 10, 64)
-	session := Sessions[sessionId]
 
-	if session.Started {
+	// TODO: sessionStorage
+	sessionId, _ := strconv.ParseInt(vars["sessionId"], 10, 64)
+	gameSession := Sessions[sessionId]
+
+	if gameSession.started.Load() {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte("Session already started"))
 		return
@@ -114,26 +117,7 @@ func ConnectToSession(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if session.FirstPlayerSession == nil {
-		firstPlayerPieceGenerator := rand.New(rand.NewSource(sessionId))
-		firstPlayerSession := MakePlayerSession(conn, firstPlayerPieceGenerator, session)
-		session.FirstPlayerSession = firstPlayerSession
-		log.Infof("Session %d created", sessionId)
-		createdSessionsCounter.Inc()
-	} else {
-		firstPlayerSession := session.FirstPlayerSession
-		secondPlayerPieceGenerator := rand.New(rand.NewSource(sessionId))
-		secondPlayerSession := MakePlayerSession(conn, secondPlayerPieceGenerator, session)
-		session.SecondPlayerSession = secondPlayerSession
-		firstPlayerSession.EnemySession = secondPlayerSession
-		secondPlayerSession.EnemySession = firstPlayerSession
-		firstPlayerSession.conn.SetPongHandler(pongHandler(firstPlayerSession))
-		secondPlayerSession.conn.SetPongHandler(pongHandler(secondPlayerSession))
-		session.Started = true
-		session.RunSession()
-		runningSessionsGauge.Inc()
-		log.Infof("Session %d started", sessionId)
-	}
+	gameSession.addPlayer(conn)
 }
 
 func pongHandler(playerSession *PlayerSession) func(appData string) error {
@@ -143,7 +127,7 @@ func pongHandler(playerSession *PlayerSession) func(appData string) error {
 			ping := time.Since(startTime).Milliseconds()
 			pingHist.Observe(float64(ping))
 			message := fmt.Sprintf("%d %d", 2, ping)
-			playerSession.SendMessage(message)
+			playerSession.sendMessage(message)
 			return nil
 		} else {
 			log.Warn("Ping UUID not found", pingUuid)

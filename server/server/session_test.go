@@ -36,8 +36,8 @@ func TestRaceEndSession(t *testing.T) {
 		ps1 := &PlayerSession{playerField: gameField1, conn: &MockConn{}, gameSession: &GameSession{}}
 		ps2 := &PlayerSession{playerField: gameField2, conn: &MockConn{}, gameSession: &GameSession{}}
 
-		ps1.EnemySession = ps2
-		ps2.EnemySession = ps1
+		ps1.enemySession = ps2
+		ps2.enemySession = ps1
 
 		done := make(chan struct{}, 2)
 

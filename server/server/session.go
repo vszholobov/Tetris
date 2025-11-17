@@ -17,10 +17,62 @@ import (
 
 type GameSession struct {
 	sessionId           int64
-	FirstPlayerSession  *PlayerSession
-	SecondPlayerSession *PlayerSession
-	Started             bool
+	firstPlayerSession  *PlayerSession
+	secondPlayerSession *PlayerSession
+	started             atomic.Bool
 	someEnded           atomic.Bool
+}
+
+func makeGameSession() *GameSession {
+	sessionId := time.Now().Unix()
+	return &GameSession{
+		sessionId: sessionId,
+	}
+}
+
+func (gameSession *GameSession) addPlayer(playerConnection *websocket.Conn) {
+	pieceGenerator := rand.New(rand.NewSource(gameSession.sessionId))
+	playerSession := makePlayerSession(playerConnection, pieceGenerator, gameSession)
+	if gameSession.firstPlayerSession == nil {
+		gameSession.firstPlayerSession = playerSession
+	} else {
+		gameSession.secondPlayerSession = playerSession
+		gameSession.firstPlayerSession.enemySession = gameSession.secondPlayerSession
+		gameSession.secondPlayerSession.enemySession = gameSession.firstPlayerSession
+		gameSession.firstPlayerSession.conn.SetPongHandler(pongHandler(gameSession.firstPlayerSession))
+		gameSession.secondPlayerSession.conn.SetPongHandler(pongHandler(gameSession.secondPlayerSession))
+		gameSession.startSession()
+	}
+}
+
+func (gameSession *GameSession) startSession() {
+	gameSession.started.Store(true)
+	gameSession.firstPlayerSession.startSession()
+	gameSession.secondPlayerSession.startSession()
+	runningSessionsGauge.Inc()
+	log.Infof("Session %d started", gameSession.sessionId)
+}
+
+func (gameSession *GameSession) endSession() {
+	firstPlayerScore := gameSession.firstPlayerSession.playerField.GetScore()
+	secondPlayerScore := gameSession.secondPlayerSession.playerField.GetScore()
+
+	if firstPlayerScore > secondPlayerScore {
+		gameSession.firstPlayerSession.sendMessage("0 0 WIN!")
+		gameSession.secondPlayerSession.sendMessage("0 0 LOSE(")
+	} else if secondPlayerScore > firstPlayerScore {
+		gameSession.firstPlayerSession.sendMessage("0 0 LOSE(")
+		gameSession.secondPlayerSession.sendMessage("0 0 WIN!")
+	} else {
+		gameSession.firstPlayerSession.sendMessage("0 0 DRAW=")
+		gameSession.secondPlayerSession.sendMessage("0 0 DRAW=")
+	}
+
+	gameSession.firstPlayerSession.conn.Close()
+	gameSession.secondPlayerSession.conn.Close()
+	delete(Sessions, gameSession.sessionId)
+	runningSessionsGauge.Dec()
+	log.Infof("Session %d ended", gameSession.sessionId)
 }
 
 type WSConn interface {
@@ -38,19 +90,12 @@ type PlayerSession struct {
 	playerInputChannel chan rune
 	isEnded            atomic.Bool
 	pieceGenerator     *rand.Rand
-	EnemySession       *PlayerSession
+	enemySession       *PlayerSession
 	mu                 sync.Mutex
 	gameSession        *GameSession
 }
 
-func MakeGameSession() *GameSession {
-	sessionId := time.Now().Unix()
-	return &GameSession{
-		sessionId: sessionId,
-	}
-}
-
-func MakePlayerSession(conn *websocket.Conn, pieceGenerator *rand.Rand, gameSession *GameSession) *PlayerSession {
+func makePlayerSession(conn *websocket.Conn, pieceGenerator *rand.Rand, gameSession *GameSession) *PlayerSession {
 	pieceSelector := field.MakePieceSelector(pieceGenerator)
 	field := field.MakeDefaultField(pieceSelector)
 	session := PlayerSession{
@@ -63,31 +108,22 @@ func MakePlayerSession(conn *websocket.Conn, pieceGenerator *rand.Rand, gameSess
 	return &session
 }
 
-func (gameSession *GameSession) RunSession() {
-	gameSession.FirstPlayerSession.RunSession()
-	gameSession.SecondPlayerSession.RunSession()
-}
-
-func (gameSession *GameSession) GetSessionId() int64 {
-	return gameSession.sessionId
-}
-
-// SendMessage thread safe socket text message sending
-func (playerSession *PlayerSession) SendMessage(message string) {
+// sendMessage thread safe socket text message sending
+func (playerSession *PlayerSession) sendMessage(message string) {
 	playerSession.mu.Lock()
 	defer playerSession.mu.Unlock()
 	playerSession.conn.WriteMessage(websocket.TextMessage, []byte(message))
 }
 
-// SendPingMessage thread safe socket ping message sending
-func (playerSession *PlayerSession) SendPingMessage(pingUuid uuid.UUID) error {
+// sendPingMessage thread safe socket ping message sending
+func (playerSession *PlayerSession) sendPingMessage(pingUuid uuid.UUID) error {
 	playerSession.mu.Lock()
 	defer playerSession.mu.Unlock()
 	pingUuidBinary, _ := pingUuid.MarshalBinary()
 	return playerSession.conn.WriteMessage(websocket.PingMessage, pingUuidBinary)
 }
 
-func (playerSession *PlayerSession) RunSession() {
+func (playerSession *PlayerSession) startSession() {
 	go playerSession.processPlayerInput()
 	go playerSession.processGameField()
 	go playerSession.processPlayerPing()
@@ -101,7 +137,7 @@ func (playerSession *PlayerSession) processPlayerPing() {
 		case <-ticker.C:
 			playerSession.conn.SetWriteDeadline(time.Now().Add(time.Second * 10))
 			pingUuid := PlayersPingMeasurer.addMeasure()
-			if err := playerSession.SendPingMessage(pingUuid); err != nil {
+			if err := playerSession.sendPingMessage(pingUuid); err != nil {
 				return
 			}
 		}
@@ -125,41 +161,22 @@ func (playerSession *PlayerSession) processGameField() {
 	}
 }
 
+// ends player session. ends game session if enemy session already ended
 func (playerSession *PlayerSession) endSession() {
 	playerSession.isEnded.Store(true)
 	if playerSession.gameSession.someEnded.CompareAndSwap(false, true) {
 		gameField := playerSession.playerField
 		// add last piece to field to not lose it
 		gameField.ConcatPiece()
-		playerSession.SendMessage(FormatFieldMessage(0, 1, gameField))
-		playerSession.EnemySession.SendMessage(FormatFieldMessage(1, 1, gameField))
+		playerSession.sendMessage(formatFieldMessage(0, 1, gameField))
+		playerSession.enemySession.sendMessage(formatFieldMessage(1, 1, gameField))
 	} else {
-		playerScore := playerSession.playerField.GetScore()
-		enemyScore := playerSession.EnemySession.playerField.GetScore()
-
-		if playerScore > enemyScore {
-			playerSession.SendMessage("0 0 WIN!")
-			playerSession.EnemySession.SendMessage("0 0 LOSE(")
-		} else if enemyScore > playerScore {
-			playerSession.SendMessage("0 0 LOSE(")
-			playerSession.EnemySession.SendMessage("0 0 WIN!")
-		} else {
-			playerSession.SendMessage("0 0 DRAW=")
-			playerSession.EnemySession.SendMessage("0 0 DRAW=")
-		}
-
-		playerSession.EnemySession.conn.Close()
-		playerSession.conn.Close()
-		sessionId := playerSession.gameSession.sessionId
-		delete(Sessions, sessionId)
-		log.Infof("Session %d ended", sessionId)
-		runningSessionsGauge.Dec()
+		playerSession.gameSession.endSession()
 	}
 }
 
 func (playerSession *PlayerSession) processPlayerInput() {
 	for !playerSession.isEnded.Load() {
-		// TODO: ticker чтобы не зависнуть когда сессия закончилась
 		_, message, err := playerSession.conn.ReadMessage()
 		if err != nil {
 			break
@@ -173,8 +190,8 @@ func (playerSession *PlayerSession) inputControl() {
 	gameField := playerSession.playerField
 	timeout := time.After(time.Second / 4 / time.Duration(gameField.GetSpeed()))
 	for {
-		playerSession.SendMessage(FormatFieldMessage(0, 1, gameField))
-		playerSession.EnemySession.SendMessage(FormatFieldMessage(1, 1, gameField))
+		playerSession.sendMessage(formatFieldMessage(0, 1, gameField))
+		playerSession.enemySession.sendMessage(formatFieldMessage(1, 1, gameField))
 		select {
 		case moveType := <-playerSession.playerInputChannel:
 			switch moveType {
@@ -195,6 +212,6 @@ func (playerSession *PlayerSession) inputControl() {
 	}
 }
 
-func FormatFieldMessage(isEnemyField int, isAlive int, gameField field.Field) string {
+func formatFieldMessage(isEnemyField int, isAlive int, gameField field.Field) string {
 	return fmt.Sprintf("%d %d %s %d %d %d %d", isEnemyField, isAlive, gameField.String(), gameField.GetSpeed(), gameField.GetScore(), gameField.GetCleanCount(), gameField.GetNextPieceType())
 }
