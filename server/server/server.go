@@ -4,6 +4,11 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"math/rand"
+	"net/http"
+	"strconv"
+	"time"
+
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
@@ -11,10 +16,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	log "github.com/sirupsen/logrus"
-	"math/rand"
-	"net/http"
-	"strconv"
-	"time"
 )
 
 var Addr = flag.String("addr", "0.0.0.0:8080", "http service address")

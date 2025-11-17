@@ -2,12 +2,13 @@ package field
 
 import (
 	"math/big"
+	"tetrisServer/env"
 
 	lib "github.com/vszholobov/tetrisLib"
 )
 
-var fullLine, _ = big.NewInt(0).SetString("111111111111", 2)
-var emptyLine, _ = big.NewInt(0).SetString("100000000001", 2)
+var fullLine, _ = big.NewInt(0).SetString(fullLineString, 2)
+var emptyLine, _ = big.NewInt(0).SetString(emptyLineString, 2)
 
 type BigIntField struct {
 	Val           *big.Int
@@ -88,7 +89,7 @@ func (gameField *BigIntField) ConcatPiece() {
 }
 
 func (gameField *BigIntField) GetSpeed() int {
-	return *gameField.CleanCount/CleanRowsCountToIncreaseSpeed + 1
+	return *gameField.CleanCount/env.CleanRowsCountToIncreaseSpeed + 1
 }
 
 func (gameField *BigIntField) GetScore() int {
