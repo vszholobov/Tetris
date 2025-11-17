@@ -38,14 +38,14 @@ func (gameField *BigIntField) SelectNextPiece() {
 func (gameField *BigIntField) CleanLines() {
 	restField := big.NewInt(0)
 	currentCleanCount := 0
-	for i := 0; i < FieldHeight-1; i++ {
-		curRange := uint(i * FieldWidth)
+	for i := 0; i < lib.FieldHeight-1; i++ {
+		curRange := uint(i * lib.FieldWidth)
 		lineMask := big.NewInt(0).Lsh(fullLine, curRange)
 		lineIsFilled := big.NewInt(0).And(lineMask, gameField.Val).Cmp(lineMask) == 0
 
 		if lineIsFilled {
 			// add empy line to end of field
-			restField.Lsh(restField, FieldWidth)
+			restField.Lsh(restField, lib.FieldWidth)
 			restField.Or(restField, emptyLine)
 			currentCleanCount += 1
 		} else {

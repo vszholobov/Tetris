@@ -1,5 +1,8 @@
 package lib
 
+const FieldWidth = 12
+const FieldHeight = 21
+
 type PieceType int
 
 var PieceTypeCount int = 7

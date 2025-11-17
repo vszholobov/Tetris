@@ -8,8 +8,6 @@ import (
 	lib "github.com/vszholobov/tetrisLib"
 )
 
-const FieldWidth = 12
-const FieldHeight = 21
 const moveToTopASCII = "\033[22A"
 const moveRightASCII = "\r\033[36C"
 const moveRightEnemyFieldASCII = "\r\033[52C"
@@ -30,8 +28,8 @@ func PrintEnemyField(field *big.Int, speed string, score string, cleanCount stri
 	fieldStr := fmt.Sprintf("%b", field)
 	fmt.Print(moveToTopASCII)
 	fmt.Print(moveRightEnemyFieldASCII)
-	for i := FieldHeight - 1; i >= 0; i-- {
-		line := fieldStr[i*FieldWidth : i*FieldWidth+FieldWidth]
+	for i := lib.FieldHeight - 1; i >= 0; i-- {
+		line := fieldStr[i*lib.FieldWidth : i*lib.FieldWidth+lib.FieldWidth]
 		line = strings.ReplaceAll(line, "1", " Ж ")
 		line = strings.ReplaceAll(line, "0", "   ")
 		fmt.Print(line)
@@ -61,8 +59,8 @@ func PrintSelfField(
 ) {
 	fieldStr := fmt.Sprintf("%b", field)
 	fmt.Print(moveToTopASCII)
-	for i := FieldHeight - 1; i >= 0; i-- {
-		line := fieldStr[i*FieldWidth : i*FieldWidth+FieldWidth]
+	for i := lib.FieldHeight - 1; i >= 0; i-- {
+		line := fieldStr[i*lib.FieldWidth : i*lib.FieldWidth+lib.FieldWidth]
 		line = strings.ReplaceAll(line, "1", " Ж ")
 		line = strings.ReplaceAll(line, "0", "   ")
 		fmt.Print(line)

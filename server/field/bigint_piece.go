@@ -153,7 +153,7 @@ func (piece *bigIntPiece) move(moveDirection PieceMoveDirection) bool {
 		case PieceMoveRight:
 			piece.rotations[i] = newRotation.Lsh(newRotation, 1)
 		case PieceMoveDown:
-			piece.rotations[i] = newRotation.Lsh(newRotation, FieldWidth)
+			piece.rotations[i] = newRotation.Lsh(newRotation, lib.FieldWidth)
 		}
 	}
 	return true
@@ -172,7 +172,7 @@ func (piece *bigIntPiece) canMove(moveDirection PieceMoveDirection) bool {
 	case PieceMoveRight:
 		newPieceVal.Lsh(newPieceVal, 1)
 	case PieceMoveDown:
-		newPieceVal.Lsh(newPieceVal, FieldWidth)
+		newPieceVal.Lsh(newPieceVal, lib.FieldWidth)
 	default:
 		return false
 	}

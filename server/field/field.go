@@ -6,8 +6,7 @@ import (
 	lib "github.com/vszholobov/tetrisLib"
 )
 
-const FieldWidth = 12
-const FieldHeight = 21
+// TODO: переменная среды/аргумент строки с значением по умолчанию
 const CleanRowsCountToIncreaseSpeed = 12
 
 type Field interface {
@@ -24,6 +23,7 @@ type Field interface {
 	String() string
 }
 
+// TODO: собрать программно используя FieldHeight
 var defaultFieldString = strings.ReplaceAll(`
 111111111111
 100000000001
