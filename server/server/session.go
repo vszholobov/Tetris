@@ -1,7 +1,8 @@
 package server
 
 import (
-	"fmt"
+	"bytes"
+	"encoding/binary"
 	"math/rand"
 	"sync"
 	"sync/atomic"
@@ -9,8 +10,9 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
+
+	lib "github.com/vszholobov/tetrisLib"
 
 	"github.com/gorilla/websocket"
 )
@@ -39,8 +41,12 @@ func (gameSession *GameSession) addPlayer(playerConnection *websocket.Conn) {
 		gameSession.secondPlayerSession = playerSession
 		gameSession.firstPlayerSession.enemySession = gameSession.secondPlayerSession
 		gameSession.secondPlayerSession.enemySession = gameSession.firstPlayerSession
-		gameSession.firstPlayerSession.conn.SetPongHandler(pongHandler(gameSession.firstPlayerSession))
-		gameSession.secondPlayerSession.conn.SetPongHandler(pongHandler(gameSession.secondPlayerSession))
+		gameSession.firstPlayerSession.conn.SetPingHandler(func(pingId string) error {
+			return gameSession.firstPlayerSession.sendPongMessage([]byte(pingId))
+		})
+		gameSession.secondPlayerSession.conn.SetPingHandler(func(pingId string) error {
+			return gameSession.secondPlayerSession.sendPongMessage([]byte(pingId))
+		})
 		gameSession.startSession()
 	}
 }
@@ -58,14 +64,14 @@ func (gameSession *GameSession) endSession() {
 	secondPlayerScore := gameSession.secondPlayerSession.playerField.GetScore()
 
 	if firstPlayerScore > secondPlayerScore {
-		gameSession.firstPlayerSession.sendMessage("0 0 WIN!")
-		gameSession.secondPlayerSession.sendMessage("0 0 LOSE(")
+		gameSession.firstPlayerSession.sendMessage(lib.Self, lib.Win, gameSession.firstPlayerSession.playerField)
+		gameSession.secondPlayerSession.sendMessage(lib.Self, lib.Lose, gameSession.secondPlayerSession.playerField)
 	} else if secondPlayerScore > firstPlayerScore {
-		gameSession.firstPlayerSession.sendMessage("0 0 LOSE(")
-		gameSession.secondPlayerSession.sendMessage("0 0 WIN!")
+		gameSession.firstPlayerSession.sendMessage(lib.Self, lib.Lose, gameSession.firstPlayerSession.playerField)
+		gameSession.secondPlayerSession.sendMessage(lib.Self, lib.Win, gameSession.secondPlayerSession.playerField)
 	} else {
-		gameSession.firstPlayerSession.sendMessage("0 0 DRAW=")
-		gameSession.secondPlayerSession.sendMessage("0 0 DRAW=")
+		gameSession.firstPlayerSession.sendMessage(lib.Self, lib.Draw, gameSession.firstPlayerSession.playerField)
+		gameSession.secondPlayerSession.sendMessage(lib.Self, lib.Draw, gameSession.secondPlayerSession.playerField)
 	}
 
 	gameSession.firstPlayerSession.conn.Close()
@@ -81,7 +87,7 @@ type WSConn interface {
 	SetWriteDeadline(t time.Time) error
 	SetReadDeadline(t time.Time) error
 	Close() error
-	SetPongHandler(func(appData string) error)
+	SetPingHandler(func(appData string) error)
 }
 
 type PlayerSession struct {
@@ -109,39 +115,39 @@ func makePlayerSession(conn *websocket.Conn, pieceGenerator *rand.Rand, gameSess
 }
 
 // sendMessage thread safe socket text message sending
-func (playerSession *PlayerSession) sendMessage(message string) {
+func (playerSession *PlayerSession) sendMessage(fieldType lib.FieldType, gameResult lib.GameResult, gameField field.Field) {
 	playerSession.mu.Lock()
 	defer playerSession.mu.Unlock()
-	playerSession.conn.WriteMessage(websocket.TextMessage, []byte(message))
+
+	fieldBytes := gameField.Bytes()
+	message := lib.GameStateMessage{
+		FieldType:  fieldType,
+		GameResult: gameResult,
+		Speed:      uint8(gameField.GetSpeed()),
+		Score:      uint16(gameField.GetScore()),
+		CleanCount: uint16(gameField.GetCleanCount()),
+		NextPiece:  lib.PieceType(gameField.GetNextPieceType()),
+	}
+	copy(message.FieldBytes[:], fieldBytes[:])
+
+	var buf bytes.Buffer
+	if err := binary.Write(&buf, binary.BigEndian, message); err != nil {
+		log.Error(err.Error())
+		return
+	}
+	playerSession.conn.WriteMessage(websocket.TextMessage, buf.Bytes())
 }
 
 // sendPingMessage thread safe socket ping message sending
-func (playerSession *PlayerSession) sendPingMessage(pingUuid uuid.UUID) error {
+func (playerSession *PlayerSession) sendPongMessage(pingId []byte) error {
 	playerSession.mu.Lock()
 	defer playerSession.mu.Unlock()
-	pingUuidBinary, _ := pingUuid.MarshalBinary()
-	return playerSession.conn.WriteMessage(websocket.PingMessage, pingUuidBinary)
+	return playerSession.conn.WriteMessage(websocket.PongMessage, pingId)
 }
 
 func (playerSession *PlayerSession) startSession() {
 	go playerSession.processPlayerInput()
 	go playerSession.processGameField()
-	go playerSession.processPlayerPing()
-}
-
-func (playerSession *PlayerSession) processPlayerPing() {
-	ticker := time.NewTicker(time.Second * 3)
-	defer ticker.Stop()
-	for {
-		select {
-		case <-ticker.C:
-			playerSession.conn.SetWriteDeadline(time.Now().Add(time.Second * 10))
-			pingUuid := PlayersPingMeasurer.addMeasure()
-			if err := playerSession.sendPingMessage(pingUuid); err != nil {
-				return
-			}
-		}
-	}
 }
 
 func (playerSession *PlayerSession) processGameField() {
@@ -168,8 +174,8 @@ func (playerSession *PlayerSession) endSession() {
 		gameField := playerSession.playerField
 		// add last piece to field to not lose it
 		gameField.ConcatPiece()
-		playerSession.sendMessage(formatFieldMessage(0, 1, gameField))
-		playerSession.enemySession.sendMessage(formatFieldMessage(1, 1, gameField))
+		playerSession.sendMessage(lib.Self, lib.Ongoing, gameField)
+		playerSession.enemySession.sendMessage(lib.Enemy, lib.Ongoing, gameField)
 	} else {
 		playerSession.gameSession.endSession()
 	}
@@ -190,8 +196,8 @@ func (playerSession *PlayerSession) inputControl() {
 	gameField := playerSession.playerField
 	timeout := time.After(time.Second / 4 / time.Duration(gameField.GetSpeed()))
 	for {
-		playerSession.sendMessage(formatFieldMessage(0, 1, gameField))
-		playerSession.enemySession.sendMessage(formatFieldMessage(1, 1, gameField))
+		playerSession.sendMessage(lib.Self, lib.Ongoing, gameField)
+		playerSession.enemySession.sendMessage(lib.Enemy, lib.Ongoing, gameField)
 		select {
 		case moveType := <-playerSession.playerInputChannel:
 			switch moveType {
@@ -210,8 +216,4 @@ func (playerSession *PlayerSession) inputControl() {
 			return
 		}
 	}
-}
-
-func formatFieldMessage(isEnemyField int, isAlive int, gameField field.Field) string {
-	return fmt.Sprintf("%d %d %s %d %d %d %d", isEnemyField, isAlive, gameField.String(), gameField.GetSpeed(), gameField.GetScore(), gameField.GetCleanCount(), gameField.GetNextPieceType())
 }

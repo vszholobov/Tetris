@@ -46,6 +46,6 @@ func MakePieceSelector(random *rand.Rand) PieceSelector {
 }
 
 func (ps *DefaultPieceSelector) SelectNextPiece() lib.PieceType {
-	random := ps.random.Intn(lib.PieceTypeCount)
+	random := ps.random.Intn(int(lib.PieceTypeCount))
 	return lib.PieceType(random)
 }

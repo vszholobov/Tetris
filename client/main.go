@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bytes"
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -10,11 +12,11 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
-	"strings"
 	"sync"
 	"tetrisClient/keyboard"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	lib "github.com/vszholobov/tetrisLib"
 )
@@ -31,9 +33,33 @@ type SessionDto struct {
 type Session struct {
 	conn                   *websocket.Conn
 	keyboardInputProcessor *keyboard.InputProcessor
-	pingMs                 uint64
 	endSessionMutex        sync.Mutex
+	sendMessageMutex       sync.Mutex
 	isSessionEnded         bool
+	pingMeasurer           *PingMeasurer
+}
+
+func (gameSession *Session) processPlayerPing() {
+	ticker := time.NewTicker(time.Second * 3)
+	defer ticker.Stop()
+	for range ticker.C {
+		pingUuid := gameSession.pingMeasurer.addMeasure()
+		if err := gameSession.sendPingMessage(pingUuid); err != nil {
+			break
+		}
+	}
+}
+
+func (gameSession *Session) sendPingMessage(pingId uuid.UUID) error {
+	gameSession.sendMessageMutex.Lock()
+	defer gameSession.sendMessageMutex.Unlock()
+	return gameSession.conn.WriteMessage(websocket.PingMessage, pingId[:])
+}
+
+func (gameSession *Session) sendMessage(message []byte) error {
+	gameSession.sendMessageMutex.Lock()
+	defer gameSession.sendMessageMutex.Unlock()
+	return gameSession.conn.WriteMessage(websocket.TextMessage, message)
 }
 
 var serverAddress = "tetris.vszholobov.ru:8080"
@@ -73,7 +99,7 @@ func main() {
 	defer inputProcessor.Close()
 
 	go inputProcessor.ProcessKeyboardInput()
-	gameSession = &Session{keyboardInputProcessor: inputProcessor}
+	gameSession = &Session{keyboardInputProcessor: inputProcessor, pingMeasurer: MakePingMeasurer()}
 
 	var sessionId string
 	if len(os.Args) < 2 {
@@ -110,9 +136,7 @@ func main() {
 	sessionConnectUrl := url.URL{Scheme: "ws", Host: serverAddress, Path: "/session/connect/" + sessionId}
 
 	connect, _, _ := websocket.DefaultDialer.Dial(sessionConnectUrl.String(), nil)
-	connect.SetPingHandler(func(appData string) error {
-		return connect.WriteControl(websocket.PongMessage, []byte(appData), time.Now().Add(time.Second*10))
-	})
+	connect.SetPongHandler(gameSession.pingMeasurer.pongHandler())
 	connect.SetCloseHandler(func(code int, text string) error {
 		onExit(strconv.Itoa(code), outputController)
 		return nil
@@ -122,7 +146,8 @@ func main() {
 	fmt.Println("SessionId: " + sessionId)
 
 	go readProcessor(connect, outputController)
-	sendProcessor(connect, inputProcessor.GetKeyboardInputTransferChannel())
+	go gameSession.processPlayerPing()
+	sendProcessor(gameSession, inputProcessor.GetKeyboardInputTransferChannel())
 }
 
 func createSession() string {
@@ -157,13 +182,12 @@ func getSessionsList() []SessionDto {
 }
 
 func sendProcessor(
-	c *websocket.Conn,
+	gameSession *Session,
 	keyboardSendChannel chan rune,
 ) {
 	for messageFromKeyboard := range keyboardSendChannel {
-		err := c.WriteMessage(websocket.TextMessage, []byte(string(messageFromKeyboard)))
+		err := gameSession.sendMessage([]byte(string(messageFromKeyboard)))
 		if err != nil {
-			// log.Println("write:", err)
 			return
 		}
 	}
@@ -179,51 +203,60 @@ func handleSigtermExit(outputController *keyboard.OutputController) {
 	}()
 }
 
-// readProcessor server handler
-func readProcessor(c *websocket.Conn, outputController *keyboard.OutputController) {
-	func() {
-		for {
-			_, message, err := c.ReadMessage()
-			if err != nil {
-				onExit("Connection closed(", outputController)
-			}
-			fields := strings.Fields(string(message))
-			if fields[0] == "0" {
-				// self field
-				if fields[1] == "0" {
-					onExit(fields[2], outputController)
-				}
-				field, _ := big.NewInt(0).SetString(string(fields[2]), 10)
-				speed := fields[3]
-				score := fields[4]
-				cleanCount := fields[5]
-				nextPieceTypeIntRepr, _ := strconv.Atoi(fields[6])
-				nextPieceType := lib.PieceType(nextPieceTypeIntRepr)
-				PrintSelfField(field, speed, score, cleanCount, nextPieceType, getPingRepresentation())
-			} else if fields[0] == "1" {
-				// enemy field
-				if fields[1] == "0" {
-
-				}
-				field, _ := big.NewInt(0).SetString(string(fields[2]), 10)
-				speed := fields[3]
-				score := fields[4]
-				cleanCount := fields[5]
-				nextPieceTypeIntRepr, _ := strconv.Atoi(fields[6])
-				nextPieceType := lib.PieceType(nextPieceTypeIntRepr)
-				PrintEnemyField(field, speed, score, cleanCount, nextPieceType)
-			} else {
-				gameSession.pingMs, _ = strconv.ParseUint(fields[1], 10, 64)
-			}
-		}
-	}()
+func decodeGameStateMessage(data []byte) (*lib.GameStateMessage, error) {
+	if len(data) != 40 {
+		return nil, fmt.Errorf("invalid GameStateMessage size: %d", len(data))
+	}
+	packet := &lib.GameStateMessage{}
+	buf := bytes.NewReader(data)
+	if err := binary.Read(buf, binary.BigEndian, packet); err != nil {
+		return nil, err
+	}
+	return packet, nil
 }
 
-func getPingRepresentation() string {
-	if gameSession.pingMs < 1000 {
-		return strconv.FormatUint(gameSession.pingMs, 10) + "ms"
-	} else {
-		return fmt.Sprintf("%.1fs", float64(gameSession.pingMs)/1000)
+func readProcessor(c *websocket.Conn, outputController *keyboard.OutputController) {
+	for {
+		_, message, err := c.ReadMessage()
+		if err != nil {
+			onExit("Connection closed(", outputController)
+		}
+		gameState, err := decodeGameStateMessage(message)
+		if err != nil {
+			onExit(err.Error(), outputController)
+		}
+
+		fieldBig := new(big.Int).SetBytes(gameState.FieldBytes[:])
+		if gameState.GameResult != lib.Ongoing {
+			var exitMessage string
+			switch gameState.GameResult {
+			case lib.Win:
+				exitMessage = "WIN!"
+			case lib.Lose:
+				exitMessage = "LOSE("
+			case lib.Draw:
+				exitMessage = "DRAW"
+			}
+			onExit(exitMessage, outputController)
+		}
+		if gameState.FieldType == lib.Self {
+			PrintSelfField(
+				fieldBig,
+				strconv.Itoa(int(gameState.Speed)),
+				strconv.Itoa(int(gameState.Score)),
+				strconv.Itoa(int(gameState.CleanCount)),
+				gameState.NextPiece,
+				gameSession.pingMeasurer.actualPing.String(),
+			)
+		} else {
+			PrintEnemyField(
+				fieldBig,
+				strconv.Itoa(int(gameState.Speed)),
+				strconv.Itoa(int(gameState.Score)),
+				strconv.Itoa(int(gameState.CleanCount)),
+				gameState.NextPiece,
+			)
+		}
 	}
 }
 

@@ -26,7 +26,7 @@ func (m *MockConn) ReadMessage() (int, []byte, error) {
 func (m *MockConn) SetWriteDeadline(t time.Time) error  { return nil }
 func (m *MockConn) SetReadDeadline(t time.Time) error   { return nil }
 func (m *MockConn) Close() error                        { m.Closed = true; return nil }
-func (m *MockConn) SetPongHandler(f func(string) error) {}
+func (m *MockConn) SetPingHandler(f func(string) error) {}
 
 func TestRaceEndSession(t *testing.T) {
 	gameField1 := field.MakeDefaultField(field.MakePieceSelector(rand.New(rand.NewSource(1))))

@@ -13,11 +13,12 @@ type Field interface {
 	MovePiece(moveDirection PieceMoveDirection) bool
 	CanMovePiece(moveDirection PieceMoveDirection) bool
 	RotatePiece(rotationType RotationType) bool
-	GetSpeed() int
-	GetScore() int
-	GetCleanCount() int
+	GetSpeed() uint8
+	GetScore() uint16
+	GetCleanCount() uint16
 	GetNextPieceType() lib.PieceType
 	String() string
+	Bytes() lib.FieldBytes
 }
 
 var fullLineString = strings.Repeat("1", lib.FieldWidth)

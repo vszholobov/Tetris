@@ -14,8 +14,8 @@ type BigIntField struct {
 	Val           *big.Int
 	CurrentPiece  *bigIntPiece
 	NextPiece     *bigIntPiece
-	Score         *int
-	CleanCount    *int
+	Score         *uint16
+	CleanCount    *uint16
 	pieceSelector PieceSelector
 }
 
@@ -23,8 +23,8 @@ func makeBigIntField(pieceSelector PieceSelector, fieldString string) *BigIntFie
 	fieldVal, _ := big.NewInt(0).SetString(fieldString, 2)
 	return &BigIntField{
 		Val:           fieldVal,
-		Score:         new(int),
-		CleanCount:    new(int),
+		Score:         new(uint16),
+		CleanCount:    new(uint16),
 		pieceSelector: pieceSelector,
 	}
 }
@@ -38,7 +38,7 @@ func (gameField *BigIntField) SelectNextPiece() {
 
 func (gameField *BigIntField) CleanLines() {
 	restField := big.NewInt(0)
-	currentCleanCount := 0
+	currentCleanCount := uint16(0)
 	for i := 0; i < lib.FieldHeight-1; i++ {
 		curRange := uint(i * lib.FieldWidth)
 		lineMask := big.NewInt(0).Lsh(fullLine, curRange)
@@ -56,7 +56,7 @@ func (gameField *BigIntField) CleanLines() {
 		}
 	}
 	*gameField.CleanCount += currentCleanCount
-	*gameField.Score += currentCleanCount * gameField.GetSpeed() * 10 / (5 - currentCleanCount)
+	*gameField.Score += currentCleanCount * uint16(gameField.GetSpeed()) * 10 / (5 - currentCleanCount)
 	// 22 lines. One redundant line for correct or concatenation.
 	// So shift to the right by the length of the field after concatenation to remove redundant empty line
 	gameField.Val.SetString(
@@ -88,15 +88,15 @@ func (gameField *BigIntField) ConcatPiece() {
 	gameField.Val.Or(gameField.Val, gameField.CurrentPiece.getVal())
 }
 
-func (gameField *BigIntField) GetSpeed() int {
-	return *gameField.CleanCount/env.CleanRowsCountToIncreaseSpeed + 1
+func (gameField *BigIntField) GetSpeed() uint8 {
+	return uint8(*gameField.CleanCount/uint16(env.CleanRowsCountToIncreaseSpeed) + 1)
 }
 
-func (gameField *BigIntField) GetScore() int {
+func (gameField *BigIntField) GetScore() uint16 {
 	return *gameField.Score
 }
 
-func (gameField *BigIntField) GetCleanCount() int {
+func (gameField *BigIntField) GetCleanCount() uint16 {
 	return *gameField.CleanCount
 }
 
@@ -125,4 +125,17 @@ func (gameField *BigIntField) intersects(pieceVal *big.Int) bool {
 	newField := big.NewInt(0).Set(gameField.Val)
 	newShape := big.NewInt(0).Set(pieceVal)
 	return newField.And(newField, newShape).Cmp(big.NewInt(0)) != 0
+}
+
+func (gameField *BigIntField) Bytes() lib.FieldBytes {
+	fieldAndPiece := big.NewInt(0).Or(gameField.Val, gameField.CurrentPiece.getVal())
+	b := fieldAndPiece.Bytes()
+
+	var arr lib.FieldBytes
+	if len(b) <= 32 {
+		copy(arr[32-len(b):], b)
+	} else {
+		copy(arr[:], b[len(b)-32:])
+	}
+	return arr
 }

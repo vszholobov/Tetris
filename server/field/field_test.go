@@ -28,7 +28,7 @@ func TestFillBottomAndClean(t *testing.T) {
 	field := MakeDefaultField(fixedPieceSelector{pieceType: lib.IShape})
 
 	startFieldRepr := field.String()
-	expectedCleanCount := 4
+	expectedCleanCount := uint16(4)
 
 	total := *N
 	step := total / 10
@@ -94,7 +94,7 @@ func TestTopBorderClosed(t *testing.T) {
 111111111111
 `, "\n", "")
 
-	for pieceType := lib.PieceType(0); int(pieceType) < lib.PieceTypeCount; pieceType++ {
+	for pieceType := lib.PieceType(0); uint8(pieceType) < lib.PieceTypeCount; pieceType++ {
 		field := MakeField(fixedPieceSelector{pieceType: pieceType}, closedFieldString)
 		for pieceMoveDirection := PieceMoveDirection(0); int(pieceMoveDirection) < PieceMoveDirectionCount; pieceMoveDirection++ {
 			if field.CanMovePiece(pieceMoveDirection) {

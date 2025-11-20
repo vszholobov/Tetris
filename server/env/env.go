@@ -6,7 +6,7 @@ import (
 	"strconv"
 )
 
-var CleanRowsCountToIncreaseSpeed = getEnvInt("CLEAN_ROWS_COUNT", 12)
+var CleanRowsCountToIncreaseSpeed = uint8(getEnvInt("CLEAN_ROWS_COUNT", 12))
 
 func getEnvInt(key string, def int) int {
 	valStr := os.Getenv(key)
