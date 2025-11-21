@@ -116,11 +116,6 @@ func (gameField *BigIntField) RotatePiece(rotationType RotationType) bool {
 	return gameField.CurrentPiece.rotate(rotationType)
 }
 
-func (gameField *BigIntField) String() string {
-	newField := big.NewInt(0).Or(gameField.Val, gameField.CurrentPiece.getVal())
-	return newField.String()
-}
-
 func (gameField *BigIntField) intersects(pieceVal *big.Int) bool {
 	newField := big.NewInt(0).Set(gameField.Val)
 	newShape := big.NewInt(0).Set(pieceVal)

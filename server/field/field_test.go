@@ -29,7 +29,7 @@ func TestMain(m *testing.M) {
 func TestFillBottomAndClean(t *testing.T) {
 	field := MakeDefaultField(fixedPieceSelector{pieceType: lib.IShape})
 
-	startFieldRepr := field.String()
+	startFieldRepr := field.Bytes()
 	expectedCleanCount := uint16(4)
 
 	total := *N
@@ -65,7 +65,7 @@ func TestFillBottomAndClean(t *testing.T) {
 		expectedCleanCount += 4
 	}
 
-	endFieldRepr := field.String()
+	endFieldRepr := field.Bytes()
 	if startFieldRepr != endFieldRepr {
 		t.Errorf("Field changed. StartRepr `%s`. End Repr `%s`", startFieldRepr, endFieldRepr)
 	}

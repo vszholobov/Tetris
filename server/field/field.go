@@ -17,7 +17,6 @@ type Field interface {
 	GetScore() uint16
 	GetCleanCount() uint16
 	GetNextPieceType() lib.PieceType
-	String() string
 	Bytes() lib.FieldBytes
 }
 

@@ -28,13 +28,16 @@ func main() {
 	router.HandleFunc("/session", server.GetSessionsList)
 	router.HandleFunc("/session/create", server.CreateSession)
 	router.HandleFunc("/session/connect/{sessionId}", server.ConnectToSession)
-	//router.HandleFunc("/session/ping/{sessionId}", server.MeasurePing)
 	router.Handle("/metrics", promhttp.Handler())
 	log.Fatal(http.ListenAndServe(*server.Addr, router))
 }
 
 func openLogFile() *os.File {
 	err := os.MkdirAll("./tetris-logs", 0777)
+	if err != nil {
+		fmt.Println("Failed to create log dir")
+		panic(err)
+	}
 	logFile := "./tetris-logs/tetris-log.txt"
 	log.SetReportCaller(true)
 	f, err := os.OpenFile(logFile, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0777)
