@@ -25,8 +25,8 @@ func (inputProcessor *InputProcessor) ProcessKeyboardInput() {
 	}
 }
 
-func (inputProcessor *InputProcessor) GetKeyboardInputTransferChannel() chan rune {
-	return inputProcessor.keyboardTransferChannel
+func (p *InputProcessor) Read() rune {
+	return <-p.keyboardTransferChannel
 }
 
 func (inputProcessor *InputProcessor) Close() {
