@@ -76,7 +76,7 @@ func (gameSession *GameSession) endSession() {
 
 	gameSession.firstPlayerSession.conn.Close()
 	gameSession.secondPlayerSession.conn.Close()
-	delete(Sessions, gameSession.sessionId)
+	sessionStorage.Delete(gameSession.sessionId)
 	runningSessionsGauge.Dec()
 	log.Infof("Session %d ended", gameSession.sessionId)
 }

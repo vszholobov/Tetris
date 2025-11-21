@@ -16,7 +16,7 @@ import (
 var Addr = flag.String("addr", "0.0.0.0:8080", "http service address")
 var upgrader = websocket.Upgrader{} // use default options
 
-var Sessions = make(map[int64]*GameSession)
+var sessionStorage = MakeSessionStorage()
 
 var runningSessionsGauge = promauto.NewGauge(prometheus.GaugeOpts{
 	Name: "running_game_sessions",
@@ -39,16 +39,15 @@ type SessionDto struct {
 func GetSessionsList(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	sessionDtos := make([]SessionDto, 0)
-	for sessionId := range Sessions {
-		session := Sessions[sessionId]
-		sessionDtos = append(sessionDtos, SessionDto{SessionId: sessionId, Started: session.started.Load()})
+	for _, session := range sessionStorage.GetAll() {
+		sessionDtos = append(sessionDtos, SessionDto{SessionId: session.sessionId, Started: session.started.Load()})
 	}
 	json.NewEncoder(w).Encode(sessionDtos)
 }
 
 func CreateSession(w http.ResponseWriter, r *http.Request) {
 	gameSession := makeGameSession()
-	Sessions[gameSession.sessionId] = gameSession
+	sessionStorage.Add(gameSession)
 	createdSessionsCounter.Inc()
 	log.Infof("Session %d created", gameSession.sessionId)
 	response := CreateSessionResponse{SessionId: gameSession.sessionId}
@@ -61,7 +60,7 @@ func ConnectToSession(w http.ResponseWriter, r *http.Request) {
 
 	// TODO: sessionStorage
 	sessionId, _ := strconv.ParseInt(vars["sessionId"], 10, 64)
-	gameSession := Sessions[sessionId]
+	gameSession, _ := sessionStorage.Get(sessionId)
 
 	if gameSession.started.Load() {
 		w.WriteHeader(http.StatusBadRequest)
