@@ -186,7 +186,22 @@ func sendProcessor(
 	keyboardSendChannel chan rune,
 ) {
 	for messageFromKeyboard := range keyboardSendChannel {
-		err := gameSession.sendMessage([]byte(string(messageFromKeyboard)))
+		var playerCommand lib.ClientCommand
+		switch messageFromKeyboard {
+		case 'a':
+			playerCommand = lib.MoveLeft
+		case 's':
+			playerCommand = lib.MoveDown
+		case 'd':
+			playerCommand = lib.MoveRight
+		case 'q':
+			playerCommand = lib.RotateLeft
+		case 'e':
+			playerCommand = lib.RotateRight
+		default:
+			continue
+		}
+		err := gameSession.sendMessage([]byte{uint8(playerCommand)})
 		if err != nil {
 			return
 		}

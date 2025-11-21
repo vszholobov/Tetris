@@ -8,6 +8,16 @@ import (
 const FieldWidth = 12
 const FieldHeight = 21
 
+type ClientCommand uint8
+
+const (
+	MoveLeft    ClientCommand = 0
+	MoveRight   ClientCommand = 1
+	MoveDown    ClientCommand = 2
+	RotateLeft  ClientCommand = 3
+	RotateRight ClientCommand = 4
+)
+
 type Ping uint16
 
 func (ping Ping) String() string {

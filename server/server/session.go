@@ -8,7 +8,6 @@ import (
 	"sync/atomic"
 	"tetrisServer/field"
 	"time"
-	"unicode/utf8"
 
 	log "github.com/sirupsen/logrus"
 
@@ -93,7 +92,7 @@ type WSConn interface {
 type PlayerSession struct {
 	playerField        field.Field
 	conn               WSConn
-	playerInputChannel chan rune
+	playerInputChannel chan lib.ClientCommand
 	isEnded            atomic.Bool
 	pieceGenerator     *rand.Rand
 	enemySession       *PlayerSession
@@ -107,7 +106,7 @@ func makePlayerSession(conn *websocket.Conn, pieceGenerator *rand.Rand, gameSess
 	session := PlayerSession{
 		playerField:        field,
 		conn:               conn,
-		playerInputChannel: make(chan rune),
+		playerInputChannel: make(chan lib.ClientCommand),
 		pieceGenerator:     pieceGenerator,
 		gameSession:        gameSession,
 	}
@@ -187,8 +186,8 @@ func (playerSession *PlayerSession) processPlayerInput() {
 		if err != nil {
 			break
 		}
-		decodeRune, _ := utf8.DecodeRune(message)
-		playerSession.playerInputChannel <- decodeRune
+		clientCommand := lib.ClientCommand(message[0])
+		playerSession.playerInputChannel <- clientCommand
 	}
 }
 
@@ -201,15 +200,15 @@ func (playerSession *PlayerSession) inputControl() {
 		select {
 		case moveType := <-playerSession.playerInputChannel:
 			switch moveType {
-			case 'd':
+			case lib.MoveRight:
 				gameField.MovePiece(field.PieceMoveLeft)
-			case 'a':
+			case lib.MoveLeft:
 				gameField.MovePiece(field.PieceMoveRight)
-			case 's':
+			case lib.MoveDown:
 				gameField.MovePiece(field.PieceMoveDown)
-			case 'q':
+			case lib.RotateLeft:
 				gameField.RotatePiece(field.PieceRotateLeft)
-			case 'e':
+			case lib.RotateRight:
 				gameField.RotatePiece(field.PieceRotateRight)
 			}
 		case <-timeout:

@@ -58,7 +58,6 @@ func CreateSession(w http.ResponseWriter, r *http.Request) {
 func ConnectToSession(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 
-	// TODO: sessionStorage
 	sessionId, _ := strconv.ParseInt(vars["sessionId"], 10, 64)
 	gameSession, _ := sessionStorage.Get(sessionId)
 
