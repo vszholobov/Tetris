@@ -34,3 +34,4 @@ jobs:
           compress_assets: "zip"
           md5sum: FALSE
           project_path: ./client
+          ldflags: "-X main.Version=${{ github.ref_name }}"

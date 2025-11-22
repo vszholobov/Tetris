@@ -17,6 +17,8 @@ import (
 	lib "github.com/vszholobov/tetrisLib"
 )
 
+var Version = "dev"
+
 type CreateSessionResponse struct {
 	SessionId int64 `json:"sessionId"`
 }
@@ -101,17 +103,32 @@ func createSession() string {
 }
 
 func getSessionsList() []SessionDto {
-	response, getSessionsListError := http.Get("http://" + serverAddress + "/session")
-	if getSessionsListError != nil {
-		panic(getSessionsListError.Error())
-	}
-	body, readResponseError := io.ReadAll(response.Body)
-	if readResponseError != nil {
-		panic(readResponseError.Error())
+	req, err := http.NewRequest("GET", "http://"+serverAddress+"/session", nil)
+	if err != nil {
+		onExit(err.Error())
 	}
 
-	listSessions := make([]SessionDto, 0)
-	json.Unmarshal(body, &listSessions)
+	req.Header.Set("X-Client-Version", Version)
+
+	resp, err := http.DefaultClient.Do(req)
+	if resp.StatusCode != 200 {
+		onExit(resp.Status)
+	}
+	if err != nil {
+		onExit(err.Error())
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		onExit(err.Error())
+	}
+
+	var listSessions []SessionDto
+	err = json.Unmarshal(body, &listSessions)
+	if err != nil {
+		onExit(err.Error())
+	}
 	return listSessions
 }
 

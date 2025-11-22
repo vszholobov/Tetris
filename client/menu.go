@@ -33,7 +33,7 @@ func (menu *Menu) getSelectedSessionId() string {
 
 func (menu *Menu) showMenu() {
 	menu.keyboard.Clear()
-	fmt.Println(" Tetris🕹️")
+	fmt.Println(" Tetris🕹️ " + Version)
 	fmt.Println("----------")
 	for index, session := range menu.sessionsList {
 		currentItem := ""
