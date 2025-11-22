@@ -129,7 +129,14 @@ func getSessionsList() []SessionDto {
 	if err != nil {
 		onExit(err.Error())
 	}
-	return listSessions
+
+	activeSessions := make([]SessionDto, 0)
+	for _, s := range listSessions {
+		if !s.Started {
+			activeSessions = append(activeSessions, s)
+		}
+	}
+	return activeSessions
 }
 
 func sendProcessor(

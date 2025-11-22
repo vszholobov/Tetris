@@ -40,9 +40,9 @@ func (menu *Menu) showMenu() {
 		if index == menu.currentSessionIndex {
 			currentItem += "\033[30;5;107m"
 		}
+		currentItem += strconv.FormatInt(int64(index), 10)
+		currentItem += ". Session: "
 		currentItem += strconv.FormatInt(session.SessionId, 10)
-		currentItem += " "
-		currentItem += strconv.FormatBool(session.Started)
 		if index == menu.currentSessionIndex {
 			currentItem += "\033[0m"
 		}
