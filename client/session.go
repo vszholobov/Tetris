@@ -4,6 +4,7 @@ import (
 	"math/big"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"tetrisClient/keyboard"
 	"time"
 
@@ -14,27 +15,38 @@ import (
 
 type Session struct {
 	conn             *websocket.Conn
-	inputProcessor   *keyboard.InputProcessor
-	outputController *keyboard.OutputController
-	endSessionMutex  sync.Mutex
+	keyboard         *keyboard.Keyboard
 	sendMessageMutex sync.Mutex
-	isSessionEnded   bool
+	closed           atomic.Bool
 	pingMeasurer     *PingMeasurer
 }
 
-func MakeGameSession(connect *websocket.Conn, inputProcessor *keyboard.InputProcessor, outputController *keyboard.OutputController) *Session {
+func MakeGameSession(keyboard *keyboard.Keyboard) *Session {
 	gameSession = &Session{
-		inputProcessor:   inputProcessor,
-		outputController: outputController,
-		pingMeasurer:     MakePingMeasurer(),
-		conn:             connect,
+		keyboard:     keyboard,
+		pingMeasurer: MakePingMeasurer(),
 	}
+	return gameSession
+}
+
+func (gameSession *Session) SetConnection(connect *websocket.Conn) {
 	connect.SetPongHandler(gameSession.pingMeasurer.pongHandler())
 	connect.SetCloseHandler(func(code int, text string) error {
-		onExit(strconv.Itoa(code), outputController)
+		onExit(strconv.Itoa(code))
 		return nil
 	})
-	return gameSession
+	gameSession.conn = connect
+}
+
+func (gameSession *Session) Close() bool {
+	if gameSession.closed.CompareAndSwap(false, true) {
+		gameSession.keyboard.Close()
+		if gameSession.conn != nil {
+			gameSession.conn.Close()
+		}
+		return true
+	}
+	return false
 }
 
 func (gameSession *Session) processPlayerPing() {
@@ -52,11 +64,11 @@ func (gameSession *Session) processServerMessages() {
 	for {
 		_, message, err := gameSession.conn.ReadMessage()
 		if err != nil {
-			onExit("Connection closed(", gameSession.outputController)
+			onExit("Connection closed(")
 		}
 		gameState, err := decodeGameStateMessage(message)
 		if err != nil {
-			onExit(err.Error(), gameSession.outputController)
+			onExit(err.Error())
 		}
 
 		fieldBig := new(big.Int).SetBytes(gameState.FieldBytes[:])
@@ -70,7 +82,7 @@ func (gameSession *Session) processServerMessages() {
 			case lib.Draw:
 				exitMessage = "DRAW"
 			}
-			onExit(exitMessage, gameSession.outputController)
+			onExit(exitMessage)
 		}
 		if gameState.FieldType == lib.Self {
 			PrintSelfField(
@@ -95,7 +107,7 @@ func (gameSession *Session) processServerMessages() {
 
 func (gameSession *Session) processPlayerActions() {
 	for {
-		messageFromKeyboard := gameSession.inputProcessor.Read()
+		messageFromKeyboard := gameSession.keyboard.Read()
 		var playerCommand lib.ClientCommand
 		switch messageFromKeyboard {
 		case 'a':

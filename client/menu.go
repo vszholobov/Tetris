@@ -12,11 +12,10 @@ type Menu struct {
 	isEnded             bool
 	isCreateSession     bool
 	isExit              bool
-	outputController    *keyboard.OutputController
-	inputProcessor      *keyboard.InputProcessor
+	keyboard            *keyboard.Keyboard
 }
 
-func MakeMenu(inputProcessor *keyboard.InputProcessor, outputController *keyboard.OutputController) Menu {
+func MakeMenu(keyboard *keyboard.Keyboard) Menu {
 	sessionsList := getSessionsList()
 	return Menu{
 		currentSessionIndex: 0,
@@ -24,8 +23,7 @@ func MakeMenu(inputProcessor *keyboard.InputProcessor, outputController *keyboar
 		isEnded:             false,
 		isCreateSession:     false,
 		isExit:              false,
-		outputController:    outputController,
-		inputProcessor:      inputProcessor,
+		keyboard:            keyboard,
 	}
 }
 
@@ -34,7 +32,7 @@ func (menu *Menu) getSelectedSessionId() string {
 }
 
 func (menu *Menu) showMenu() {
-	menu.outputController.Clear()
+	menu.keyboard.Clear()
 	fmt.Println(" Tetris🕹️")
 	fmt.Println("----------")
 	for index, session := range menu.sessionsList {
@@ -55,7 +53,7 @@ func (menu *Menu) showMenu() {
 func (menu *Menu) handleMenu() {
 	for !menu.isEnded {
 		menu.showMenu()
-		input := menu.inputProcessor.Read()
+		input := menu.keyboard.Read()
 		switch input {
 		case 115:
 			// s

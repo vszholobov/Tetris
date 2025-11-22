@@ -48,25 +48,24 @@ List of control keys:
 `
 
 func main() {
-	outputController := keyboard.InitOutputController()
-	handleSigtermExit(outputController)
+	keyboard := keyboard.MakeKeyboard()
+	defer keyboard.Close()
+	gameSession := MakeGameSession(keyboard)
+	handleSigtermExit()
 	if len(os.Args) >= 2 {
-		onExit(helpMessage, outputController)
+		onExit(helpMessage)
 	}
 
-	outputController.HideCursor()
-	defer outputController.ShowCursor()
+	keyboard.HideCursor()
+	defer keyboard.ShowCursor()
 
-	inputProcessor := keyboard.MakeInputProcessor()
-	defer inputProcessor.Close()
-
-	go inputProcessor.ProcessKeyboardInput()
+	go keyboard.ProcessKeyboardInput()
 
 	var sessionId string
-	menu := MakeMenu(inputProcessor, outputController)
+	menu := MakeMenu(keyboard)
 	menu.handleMenu()
 	if menu.isExit {
-		onExit("", outputController)
+		onExit("")
 	} else if menu.isCreateSession {
 		sessionId = createSession()
 	} else {
@@ -74,9 +73,12 @@ func main() {
 	}
 	sessionConnectUrl := url.URL{Scheme: "ws", Host: serverAddress, Path: "/session/connect/" + sessionId}
 
-	connect, _, _ := websocket.DefaultDialer.Dial(sessionConnectUrl.String(), nil)
+	connect, _, err := websocket.DefaultDialer.Dial(sessionConnectUrl.String(), nil)
+	if err != nil {
+		onExit("Connection error(")
+	}
 	defer connect.Close()
-	gameSession := MakeGameSession(connect, inputProcessor, outputController)
+	gameSession.SetConnection(connect)
 	fmt.Println("SessionId: " + sessionId)
 
 	go gameSession.processServerMessages()
@@ -141,12 +143,12 @@ func sendProcessor(
 }
 
 // Handles interrupt signal
-func handleSigtermExit(outputController *keyboard.OutputController) {
+func handleSigtermExit() {
 	interrupt := make(chan os.Signal, 1)
 	signal.Notify(interrupt, os.Interrupt)
 	go func() {
 		<-interrupt
-		onExit("", outputController)
+		onExit("")
 	}()
 }
 
@@ -163,20 +165,9 @@ func decodeGameStateMessage(data []byte) (*lib.GameStateMessage, error) {
 }
 
 // onExit Closes keyboard input stream and makes cursor visible back
-func onExit(exitMessage string, outputController *keyboard.OutputController) {
-	gameSession.endSessionMutex.Lock()
-	if !gameSession.isSessionEnded {
-		gameSession.isSessionEnded = true
-		outputController.ShowCursor()
-		outputController.Clear()
+func onExit(exitMessage string) {
+	if gameSession.Close() {
 		fmt.Println(exitMessage)
-		if gameSession.inputProcessor != nil {
-			gameSession.inputProcessor.Close()
-		}
-		if gameSession.conn != nil {
-			gameSession.conn.Close()
-		}
+		os.Exit(0)
 	}
-	gameSession.endSessionMutex.Unlock()
-	os.Exit(0)
 }
