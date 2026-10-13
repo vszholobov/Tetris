@@ -5,10 +5,12 @@ on:
     branches: [ "main" ]
     paths:
       - 'server/**'
+      - 'lib/**'
   pull_request:
     branches: [ "main" ]
     paths:
       - 'server/**'
+      - 'lib/**'
 
 jobs:
   test:

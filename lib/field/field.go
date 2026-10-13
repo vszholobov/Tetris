@@ -37,6 +37,15 @@ func MakeDefaultField(pieceSelector PieceSelector) Field {
 	return MakeField(pieceSelector, defaultFieldString)
 }
 
+// MakeDefaultFieldWithSpeedRows preserves the server's configurable speed progression.
+func MakeDefaultFieldWithSpeedRows(pieceSelector PieceSelector, rows uint8) Field {
+	f := MakeDefaultField(pieceSelector).(*BigIntField)
+	if rows != 0 {
+		f.cleanRowsForSpeed = uint16(rows)
+	}
+	return f
+}
+
 func MakeField(pieceSelector PieceSelector, fieldVal string) Field {
 	gameField := makeBigIntField(pieceSelector, fieldVal)
 	gameField.SelectNextPiece()

@@ -33,6 +33,8 @@ var gameSession *Session
 
 var helpMessage = `
 Run client menu by launching the application without arguments
+Run offline single-player: --single [--seed N] [--trace]
+Single-player exit: x, Escape or Ctrl+C
 List of control keys:
 1) Menu
 * r - reload running sessions list
@@ -50,13 +52,21 @@ List of control keys:
 `
 
 func main() {
+	if len(os.Args) >= 2 && os.Args[1] == "--single" {
+		if err := runSingle(os.Args[2:]); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		return
+	}
+	if len(os.Args) >= 2 {
+		fmt.Print(helpMessage)
+		return
+	}
 	keyboard := keyboard.MakeKeyboard()
 	defer keyboard.Close()
 	gameSession := MakeGameSession(keyboard)
 	handleSigtermExit()
-	if len(os.Args) >= 2 {
-		onExit(helpMessage)
-	}
 
 	keyboard.HideCursor()
 	defer keyboard.ShowCursor()

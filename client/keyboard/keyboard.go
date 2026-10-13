@@ -16,7 +16,7 @@ const hideCursorASCII = "\033[?25l"
 type Keyboard struct {
 	keyboardTransferChannel chan rune
 	keyboardInputChannel    *tty.TTY
-	clearFunction           func()
+	clearFunction           func() error
 	closed                  atomic.Bool
 }
 
@@ -62,25 +62,30 @@ func (oc *Keyboard) ShowCursor() {
 	fmt.Print(showCursorASCII)
 }
 
-func selectClearFunction() func() {
+// ClearScreen uses the same external command in network and single-player modes.
+func ClearScreen() error {
+	return selectClearFunction()()
+}
+
+func selectClearFunction() func() error {
 	switch runtime.GOOS {
 	case "linux":
-		return func() {
+		return func() error {
 			cmd := exec.Command("clear") //Linux example, its tested
 			cmd.Stdout = os.Stdout
-			cmd.Run()
+			return cmd.Run()
 		}
 	case "darwin":
-		return func() {
+		return func() error {
 			cmd := exec.Command("clear") //Macos example, its tested
 			cmd.Stdout = os.Stdout
-			cmd.Run()
+			return cmd.Run()
 		}
 	case "windows":
-		return func() {
+		return func() error {
 			cmd := exec.Command("cmd", "/c", "cls") //Windows example, its tested
 			cmd.Stdout = os.Stdout
-			cmd.Run()
+			return cmd.Run()
 		}
 	default:
 		panic("Your platform is unsupported! I can't clear terminal screen :(")
