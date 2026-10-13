@@ -1,0 +1,28 @@
+name: Test Client and Shared Game
+
+on:
+  push:
+    branches: [main]
+    paths: ['client/**', 'lib/**', '.github/workflows/test_client.yml']
+  pull_request:
+    paths: ['client/**', 'lib/**', '.github/workflows/test_client.yml']
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: client/go.mod
+          cache-dependency-path: client/go.sum
+      - run: go test -race ./...
+        working-directory: lib
+      - run: go test -race ./...
+        working-directory: client
+      - name: Cross-compile supported clients
+        working-directory: client
+        run: |
+          for target in linux darwin windows; do
+            CGO_ENABLED=0 GOOS=$target GOARCH=amd64 go build -o /tmp/tetris-$target .
+          done

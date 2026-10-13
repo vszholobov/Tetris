@@ -3,10 +3,11 @@ package server
 import (
 	"bytes"
 	"encoding/binary"
+	"github.com/vszholobov/tetrisLib/field"
 	"math/rand"
 	"sync"
 	"sync/atomic"
-	"tetrisServer/field"
+	"tetrisServer/env"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -102,7 +103,7 @@ type PlayerSession struct {
 
 func makePlayerSession(conn *websocket.Conn, pieceGenerator *rand.Rand, gameSession *GameSession) *PlayerSession {
 	pieceSelector := field.MakePieceSelector(pieceGenerator)
-	field := field.MakeDefaultField(pieceSelector)
+	field := field.MakeDefaultFieldWithSpeedRows(pieceSelector, env.CleanRowsCountToIncreaseSpeed)
 	session := PlayerSession{
 		playerField:        field,
 		conn:               conn,

@@ -1,9 +1,9 @@
 package server
 
 import (
+	"github.com/vszholobov/tetrisLib/field"
 	"math/rand"
 	"testing"
-	"tetrisServer/field"
 	"time"
 
 	"github.com/gorilla/websocket"
