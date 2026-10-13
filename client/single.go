@@ -43,7 +43,8 @@ func runSingle(args []string) error {
 	fmt.Print("\x1b[?25l")
 	defer fmt.Print("\x1b[?25h")
 
-	keys := make(chan rune)
+	// A bounded queue lets the reader accept a short burst while a frame is written.
+	keys := make(chan rune, 64)
 	errors := make(chan error, 1)
 	done := make(chan struct{})
 	defer close(done)
@@ -61,54 +62,123 @@ func runSingle(args []string) error {
 			}
 		}
 	}()
-	game := single.New(*seed)
-	renderSingle(os.Stdout, game.State())
-	if *trace {
-		fmt.Print("TETRIS READY\r\n")
+	return playSingle(os.Stdout, single.New(*seed), keys, errors, *trace)
+}
+
+func playSingle(out io.Writer, game *single.Game, keys <-chan rune, errors <-chan error, trace bool) error {
+	var renderer singleRenderer
+	if err := renderer.Render(out, game.State()); err != nil {
+		return err
+	}
+	if trace {
+		fmt.Fprint(out, "\r\nTETRIS READY\r\n")
 	}
 	timer := time.NewTimer(game.Interval())
 	defer timer.Stop()
+	frames := time.NewTicker(time.Second / 30)
+	defer frames.Stop()
+	dirty := false
 	for !game.Over() {
 		select {
 		case err := <-errors:
 			return fmt.Errorf("read terminal: %w", err)
 		case key := <-keys:
 			if key == 'x' || key == 27 || key == 3 {
-				fmt.Print("\r\nTETRIS EXIT\r\n")
+				fmt.Fprintf(out, "\x1b[%d;1H\r\nTETRIS EXIT\r\n", lib.FieldHeight+2)
 				return nil
 			}
 			changed := game.Input(key)
-			renderSingle(os.Stdout, game.State())
-			if *trace {
-				fmt.Printf("TETRIS INPUT key=%c changed=%t\r\n", key, changed)
+			dirty = dirty || changed
+			if trace {
+				fmt.Fprintf(out, "\r\nTETRIS INPUT key=%c changed=%t\r\n", key, changed)
 			}
 		case <-timer.C:
 			game.Tick()
-			renderSingle(os.Stdout, game.State())
-			if *trace {
-				fmt.Print("TETRIS TICK\r\n")
-			}
+			// Rendering no longer adds its duration to the gravity interval.
 			timer.Reset(game.Interval())
+			dirty = true
+			if trace {
+				fmt.Fprint(out, "\r\nTETRIS TICK\r\n")
+			}
+		case <-frames.C:
+			if dirty {
+				if err := renderer.Render(out, game.State()); err != nil {
+					return err
+				}
+				dirty = false
+			}
 		}
 	}
-	fmt.Printf("\r\nGAME OVER score=%d\r\n", game.State().Score)
+	if err := renderer.Render(out, game.State()); err != nil {
+		return err
+	}
+	fmt.Fprintf(out, "\x1b[%d;1H\r\nGAME OVER score=%d\r\n", lib.FieldHeight+2, game.State().Score)
 	return nil
 }
 
-func renderSingle(out io.Writer, state lib.GameStateMessage) {
-	var frame strings.Builder
-	frame.WriteString("\x1b[HTetris | a/d: move, s: down, q/e: rotate, x: quit\x1b[K\r\n")
+type singleRenderer struct {
+	previous [lib.FieldHeight + 2]string
+}
+
+func singleRows(state lib.GameStateMessage) [lib.FieldHeight + 2]string {
+	var rows [lib.FieldHeight + 2]string
+	rows[0] = "Tetris | a/d: move, s: down, q/e: rotate, x: quit"
 	bits := new(big.Int).SetBytes(state.FieldBytes[:])
 	for row := 0; row < lib.FieldHeight; row++ {
+		var line strings.Builder
 		for col := lib.FieldWidth - 1; col >= 0; col-- {
 			if bits.Bit(row*lib.FieldWidth+col) != 0 {
-				frame.WriteByte('#')
+				line.WriteByte('#')
 			} else {
-				frame.WriteByte(' ')
+				line.WriteByte(' ')
 			}
 		}
-		frame.WriteString("\x1b[K\r\n")
+		if row == 0 {
+			line.WriteString("    Next:")
+		} else if row == 1 || row == 2 {
+			preview := RepresentationByType[state.NextPiece]
+			line.WriteString("    ")
+			if row-1 < len(preview) {
+				line.WriteString(strings.ReplaceAll(preview[row-1], "Ж", "#"))
+			}
+		}
+		rows[row+1] = line.String()
 	}
-	fmt.Fprintf(&frame, "Score: %d | Speed: %d | Lines: %d | Next: %d\x1b[K\r\n", state.Score, state.Speed, state.CleanCount, state.NextPiece)
-	io.WriteString(out, frame.String())
+	rows[len(rows)-1] = fmt.Sprintf("Score: %d | Speed: %d | Lines: %d", state.Score, state.Speed, state.CleanCount)
+	return rows
+}
+
+// Render only changed spans. Erase stale cells with spaces, never ESC[K to the
+// far edge of the terminal. A failed write must not advance the frame cache.
+func (r *singleRenderer) Render(out io.Writer, state lib.GameStateMessage) error {
+	rows := singleRows(state)
+	var frame strings.Builder
+	for row, next := range rows {
+		previous := r.previous[row]
+		width := max(len(next), len(previous))
+		next += strings.Repeat(" ", width-len(next))
+		previous += strings.Repeat(" ", width-len(previous))
+		start := 0
+		for start < width && next[start] == previous[start] {
+			start++
+		}
+		end := width
+		for end > start && next[end-1] == previous[end-1] {
+			end--
+		}
+		if start < end {
+			fmt.Fprintf(&frame, "\x1b[%d;%dH%s", row+1, start+1, next[start:end])
+		}
+	}
+	if frame.Len() != 0 {
+		n, err := io.WriteString(out, frame.String())
+		if err != nil {
+			return fmt.Errorf("draw frame: %w", err)
+		}
+		if n != frame.Len() {
+			return io.ErrShortWrite
+		}
+	}
+	r.previous = rows
+	return nil
 }
