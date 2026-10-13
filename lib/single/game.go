@@ -51,20 +51,19 @@ func (g *Game) Input(key rune) bool {
 	if g.over {
 		return false
 	}
+	before := g.State()
 	switch key {
 	case 'a':
 		// The field stores horizontal coordinates from the least significant bit.
-		return g.field.MovePiece(field.PieceMoveRight)
+		g.field.MovePiece(field.PieceMoveRight)
 	case 'd':
-		return g.field.MovePiece(field.PieceMoveLeft)
+		g.field.MovePiece(field.PieceMoveLeft)
 	case 's':
-		before := g.State()
 		g.Tick()
-		return before != g.State()
 	case 'q':
-		return g.field.RotatePiece(field.PieceRotateLeft)
+		g.field.RotatePiece(field.PieceRotateLeft)
 	case 'e':
-		return g.field.RotatePiece(field.PieceRotateRight)
+		g.field.RotatePiece(field.PieceRotateRight)
 	}
-	return false
+	return before != g.State()
 }

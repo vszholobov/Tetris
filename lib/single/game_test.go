@@ -66,6 +66,24 @@ func TestRotationRoundTrip(t *testing.T) {
 	}
 }
 
+func TestSquareRotationDoesNotReportAChange(t *testing.T) {
+	g := &Game{field: field.MakeDefaultField(squareSelector{})}
+	if g.Input('q') || g.Input('e') {
+		t.Fatal("square rotations did not change the board")
+	}
+}
+
+func TestIntegrationSeedChangesBoardForEveryControl(t *testing.T) {
+	g := New(2)
+	g.Tick()
+	for _, key := range "adsqe" {
+		before := g.State()
+		if !g.Input(key) || before.FieldBytes == g.State().FieldBytes {
+			t.Fatalf("integration key %c did not change the board", key)
+		}
+	}
+}
+
 func TestLineClearAndScore(t *testing.T) {
 	board := "111111111111" + strings.Repeat("111110011111", 2) + strings.Repeat("100000000001", lib.FieldHeight-3)
 	g := &Game{field: field.MakeField(squareSelector{}, board)}
