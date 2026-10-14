@@ -104,6 +104,9 @@ func TestNetworkMenuAndCompactRendering(t *testing.T) {
 	if err := drawNetworkRows(&output, &previous, rows); err != nil {
 		t.Fatal(err)
 	}
+	if !strings.Contains(output.String(), rows[0]+"\x1b[K") {
+		t.Fatal("waiting message tail was not erased")
+	}
 	output.Reset()
 	if err := drawNetworkRows(&output, &previous, rows); err != nil || output.Len() != 0 {
 		t.Fatal("unchanged frame emitted")

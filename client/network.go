@@ -300,6 +300,9 @@ func drawNetworkRows(out io.Writer, previous *[lib.FieldHeight + 2]string, rows 
 		}
 		width := max(len(old), len(next))
 		fmt.Fprintf(&frame, "\x1b[%d;1H%s%s", row+1, next, strings.Repeat(" ", width-len(next)))
+		if row == 0 && old == "" {
+			frame.WriteString("\x1b[K")
+		} // remove the pre-game waiting message
 	}
 	if frame.Len() != 0 {
 		n, err := io.WriteString(out, frame.String())
