@@ -36,6 +36,35 @@ go build -o tetrisClient .
 
 Проверки: `go test ./...` отдельно в `lib`, `client` и `server`.
 
+## Сетевая игра
+
+Сервер можно выбрать без пересборки клиента:
+
+```sh
+./tetrisClient --network --server 192.168.1.10:8080
+./tetrisClient --network --server 192.168.1.10:8080 --create
+./tetrisClient --network --server 192.168.1.10:8080 --session 123456789
+```
+
+Без аргументов открывается сетевое меню с прежним адресом сервера. В меню:
+`c` — создать, `r` — обновить, `w`/`s` — выбрать, Enter — подключиться,
+`x` или `e` — выйти. В игре `x`, Escape или Ctrl+C возвращают управление.
+Оба поля рисуются ASCII, помещаются в терминале шириной 80 символов и
+обновляются до 30 кадров/с. Недоступный сервер даёт ошибку вместо паники;
+сетевые запросы и подключение ограничены пятью секундами. Протокол — HTTP
+и WebSocket без TLS. `--trace` выводит подключение, поля, ввод, pong и выход.
+
+Локальный сервер из этого репозитория:
+
+```sh
+cd server
+go run . -addr 0.0.0.0:8080
+```
+
+В OSel: `tetris --network --server IP:8080`. Одиночный запуск `tetris`
+сохраняет прежнее поведение. Ядро должно поддерживать TCP и системные вызовы
+сокетов Linux. Для QEMU локальный сервер хоста доступен как `10.0.2.2`.
+
 ## Demo
 
 ### Scoring tetris:
@@ -67,15 +96,12 @@ Launch menu
 
 Create new session:
 ```
-./tetrisClient create
+./tetrisClient --network --create
 ```
 
 Connect to existing session:
 ```
-./tetrisClient connect 123456789
+./tetrisClient --network --session 123456789
 ```
 
-Show list of existing sessions:
-```
-./tetrisClient list
-```
+The network menu lists active sessions; press `r` to refresh.
